@@ -1,0 +1,265 @@
+# ==============================================================================
+# Heretek OpenClaw — LiteLLM Configuration
+# ==============================================================================
+# Model routing, embeddings, and caching for Heretek OpenClaw
+#
+# DEFAULT MODEL: Ollama Llama 3.1 (llama3.1)
+# This file is mounted to the LiteLLM container at /app/config.yaml
+# ==============================================================================
+
+# ==============================================================================
+# MODEL LIST — Available Models
+# ==============================================================================
+model_list:
+  # ---------------------------------------------------------------------------
+  # DEFAULT MODEL: Ollama Llama 3.1 (Primary)
+  # ---------------------------------------------------------------------------
+  - model_name: llama3.1
+    litellm_params:
+      model: ollama/llama3.1
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: llama3.1:70b
+    litellm_params:
+      model: ollama/llama3.1:70b
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: llama3.1:8b
+    litellm_params:
+      model: ollama/llama3.1:8b
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  # ---------------------------------------------------------------------------
+  # Additional Ollama Models
+  # ---------------------------------------------------------------------------
+  - model_name: llama3
+    litellm_params:
+      model: ollama/llama3
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: qwen2.5:72b
+    litellm_params:
+      model: ollama/qwen2.5:72b
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: qwen2.5:32b
+    litellm_params:
+      model: ollama/qwen2.5:32b
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: qwen2.5:14b
+    litellm_params:
+      model: ollama/qwen2.5:14b
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: qwen2.5:7b
+    litellm_params:
+      model: ollama/qwen2.5:7b
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: mistral
+    litellm_params:
+      model: ollama/mistral
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: phi4
+    litellm_params:
+      model: ollama/phi4
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  # ---------------------------------------------------------------------------
+  # Ollama Embedding Models
+  # ---------------------------------------------------------------------------
+  - model_name: llama3-embedding
+    litellm_params:
+      model: ollama/llama3-embedding
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  - model_name: nomic-embed-text
+    litellm_params:
+      model: ollama/nomic-embed-text
+      api_key: os.environ/OLLAMA_API_KEY
+      api_base: http://host.docker.internal:11434
+      num_retries: 0
+
+  # ---------------------------------------------------------------------------
+  # Cloud Models (Optional — requires API keys)
+  # ---------------------------------------------------------------------------
+  - model_name: minimax/M2.5
+    litellm_params:
+      model: minimax/M2.5
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: https://api.minimaxi.chat/v1
+
+  - model_name: minimax/M2.7
+    litellm_params:
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: https://api.minimaxi.chat/v1
+
+  - model_name: glm-5
+    litellm_params:
+      model: glm-5
+      api_key: os.environ/GLM_API_KEY
+      api_base: https://open.bigmodel.cn/api/paas/v4
+
+  - model_name: qwen3.5
+    litellm_params:
+      model: qwen3.5
+      api_key: os.environ/QWEN_API_KEY
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+  - model_name: kimi
+    litellm_params:
+      model: kimi
+      api_key: os.environ/KIMI_API_KEY
+      api_base: https://api.moonshot.cn/v1
+
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: claude-sonnet-4-20250514
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  - model_name: gemini-2.0-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+# ==============================================================================
+# LITELLM SETTINGS
+# ==============================================================================
+litellm_settings:
+  # Default model (Llama 3.1)
+  default_model: llama3.1
+
+  # Drop unsupported params (compatibility)
+  drop_params: true
+
+  # Disable verbose logging by default
+  set_verbose: false
+
+  # Request timeout (seconds)
+  request_timeout: 300
+
+  # Retry settings
+  num_retries: 2
+  retry_after: 2
+
+  # Enable caching
+  cache: true
+  cache_params:
+    ttl: 3600
+    redis_url: redis://redis:6379/0
+
+  # Custom embeddings base
+  custom_embeddings_base: "http://host.docker.internal:11434"
+
+# ==============================================================================
+# GENERAL SETTINGS
+# ==============================================================================
+general_settings:
+  # Database connection for LiteLLM to store model configs
+  database_url: postgresql://heretek:heretek@postgres:5432/heretek
+
+  # Redis for caching and rate limiting
+  redis_url: redis://redis:6379/0
+
+  # Master key for authentication
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+  # Environment
+  environment: heretek-openclaw
+
+# ==============================================================================
+# A2A (AGENT-TO-AGENT) PROTOCOL SETTINGS
+# ==============================================================================
+a2a_settings:
+  # Enable A2A protocol
+  enabled: true
+
+  # Default agent timeout (seconds)
+  agent_timeout: 300
+
+  # Session management
+  session_persistence: redis
+  session_ttl: 86400  # 24 hours
+
+  # Agent endpoints
+  agent_endpoint_format: "/v1/agents/{agent_name}"
+  send_message_endpoint: "/v1/agents/{agent_name}/send"
+  receive_message_endpoint: "/v1/agents/{agent_name}/receive"
+
+  # Health check
+  health_check_endpoint: "/health"
+  health_check_timeout: 10
+
+# ==============================================================================
+# RATE LIMITING
+# ==============================================================================
+router_settings:
+  # Routing strategy: simple-shuffle, latency-based-routing, usage-based-routing
+  routing_strategy: latency-based-routing
+
+  # Enable rate limiting
+  enable_rate_limiting: true
+
+  # Default limits
+  default_limit_requests: 60
+  default_limit_period: 60  # per minute
+
+  # Model-specific limits (can override default)
+  model_limits:
+    llama3.1:
+      requests_per_minute: 30
+    llama3.1:70b:
+      requests_per_minute: 10
+    gpt-4o:
+      requests_per_minute: 20
+
+# ==============================================================================
+# FALLBACK MODELS (if default fails)
+# ==============================================================================
+fallback_models:
+  - llama3.1
+  - qwen2.5:14b
+  - mistral
+
+# ==============================================================================
+# GUARDRAILS (Content Filtering)
+# ==============================================================================
+# guardrails:
+#   - guardrail_name: "content_filter"
+#     actions:
+#       - block

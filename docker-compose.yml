@@ -1,0 +1,192 @@
+# Heretek OpenClaw — Infrastructure Services
+# LiteLLM Gateway + PostgreSQL (pgvector) + Redis
+#
+# Architecture:
+#   ┌─────────────────────────────────────────────────────────┐
+#   │                    Heretek OpenClaw                      │
+#   │  ┌───────────┐  ┌───────────┐  ┌───────────────────┐    │
+#   │  │  Agents   │──│  LiteLLM  │──│  External APIs    │    │
+#   │  │ (Steward, │  │ :4000     │  │  (OpenAI, Anthropic,│   │
+#   │  │  Triad,   │  │           │  │   Google, etc.)   │    │
+#   │  │  etc.)    │  └─────┬─────┘  └───────────────────┘    │
+#   │  └───────────┘        │                                 │
+#   │                       │                                 │
+#   │               ┌───────┴───────┐                         │
+#   │               │               │                         │
+#   │         ┌─────▼─────┐   ┌─────▼─────┐                  │
+#   │         │ PostgreSQL │   │   Redis   │                  │
+#   │         │ :5432      │   │  :6379    │                  │
+#   │         │ + pgvector │   │ (cache,   │                  │
+#   │         │ (RAG,      │   │  rate-    │                  │
+#   │         │  vector DB)│   │  limiting)│                  │
+#   │         └───────────┘   └───────────┘                  │
+#   └─────────────────────────────────────────────────────────┘
+#
+# Usage:
+#   docker-compose up -d
+#   docker-compose logs -f litellm
+#   docker-compose down (stops containers)
+#   docker-compose down -v (stops + removes volumes)
+#
+# Default Ports:
+#   litellm:    4000 (Gateway + A2A)
+#   postgres:   5432 (Database + Vector)
+#   redis:      6379 (Cache + Rate Limiting)
+
+services:
+  # ==============================================================================
+  # LiteLLM Gateway — Unified LLM API with A2A (Agent-to-Agent) Protocol
+  # ==============================================================================
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: heretek-litellm
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml:ro
+    environment:
+      # ─────────────────────────────────────────────────────────────────────────
+      # LiteLLM Core Settings
+      # ─────────────────────────────────────────────────────────────────────────
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-heretek-master-key-change-me}
+      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY:-heretek-salt-change-me}
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # Database & Cache Connections
+      # ─────────────────────────────────────────────────────────────────────────
+      - DATABASE_URL=postgresql://heretek:${POSTGRES_PASSWORD:-heretek}@postgres:5432/heretek
+      - REDIS_URL=redis://redis:6379/0
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # Model Settings
+      # ─────────────────────────────────────────────────────────────────────────
+      - OLLAMA_HOST=http://ollama:11434
+      - STORE_MODEL_IN_DB=True
+      - LITELLM_DROP_PARAMS=True
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # A2A (Agent-to-Agent) Protocol Settings
+      # ─────────────────────────────────────────────────────────────────────────
+      - AGENT_MODE_ENABLED=true
+      - AGENT_A2A_VERSION=1.0
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # UI & Monitoring
+      # ─────────────────────────────────────────────────────────────────────────
+      - LITELLM_UI_USERNAME=${LITELLM_UI_USERNAME:-admin}
+      - LITELLM_UI_PASSWORD=${LITELLM_UI_PASSWORD:-heretek-admin}
+    
+    command: [
+      "--config", "/app/config.yaml",
+      "--port", "4000",
+      "--num_workers", "4"
+    ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - heretek-network
+
+  # ==============================================================================
+  # PostgreSQL with pgvector — Vector Database for RAG
+  # ==============================================================================
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: heretek-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: heretek
+      POSTGRES_USER: heretek
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-heretek}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U heretek -d heretek"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - heretek-network
+
+  # ==============================================================================
+  # Redis — Caching & Rate Limiting
+  # ==============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: heretek-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - heretek-network
+
+  # ==============================================================================
+  # Ollama — Local LLM Runtime (Optional, for local models)
+  # ==============================================================================
+  # NOTE: Run `docker exec heretek-ollama ollama pull llama3.1` to pull the default model
+  #       Or use the healthcheck to auto-pull on first run
+  # ==============================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: heretek-ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+# ==============================================================================
+# Volumes — Persistent Data Storage
+# ==============================================================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  ollama_data:
+    driver: local
+
+# ==============================================================================
+# Networks — Container Communication
+# ==============================================================================
+networks:
+  heretek-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
