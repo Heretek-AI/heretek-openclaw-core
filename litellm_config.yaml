@@ -1,10 +1,14 @@
 # ==============================================================================
-# Heretek OpenClaw — LiteLLM Configuration
+# Heretek OpenClaw — LiteLLM Configuration (Enhanced)
 # ==============================================================================
-# Model routing, embeddings, and caching for Heretek OpenClaw
+# Model routing, embeddings, caching, A2A protocol, and observability
+# for Heretek OpenClaw
 #
 # DEFAULT MODEL: MiniMax M2.5 (via LiteLLM Gateway)
 # This file is mounted to the LiteLLM container at /app/config.yaml
+#
+# Version: 1.1.0 (Enhanced with cost-aware routing, A2A improvements)
+# Last Updated: 2026-03-29
 # ==============================================================================
 
 model_list:
@@ -24,6 +28,51 @@ model_list:
       api_base: https://api.minimaxi.chat/v1
 
   # -------------------------------------------------------------------------
+  # Model Aliases for Use Cases
+  # -------------------------------------------------------------------------
+  - model_name: fast-cheap
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: balanced
+    litellm_params:
+      model: qwen/qwen3.5
+      api_key: os.environ/QWEN_API_KEY
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+  - model_name: premium
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  # -------------------------------------------------------------------------
+  # Agent-Specific Model Assignments
+  # -------------------------------------------------------------------------
+  - model_name: agent-orchestrator
+    litellm_params:
+      model: qwen/qwen3.5
+      api_key: os.environ/QWEN_API_KEY
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      num_retries: 0
+
+  - model_name: agent-triad
+    litellm_params:
+      model: glm/glm-5
+      api_key: os.environ/GLM_API_KEY
+      api_base: https://open.bigmodel.cn/api/paas/v4
+
+  - model_name: agent-coder
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+
+  - model_name: agent-sentinel
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # -------------------------------------------------------------------------
   # Ollama Models (Optional - uncomment if using local Ollama)
   # -------------------------------------------------------------------------
   # - model_name: llama3.1
@@ -34,7 +83,7 @@ model_list:
   #     num_retries: 0
 
   # -------------------------------------------------------------------------
-  # Cloud Models
+  # Cloud Models (Standard)
   # -------------------------------------------------------------------------
   - model_name: glm-5
     litellm_params:
@@ -79,37 +128,91 @@ litellm_settings:
   drop_params: true
   set_verbose: false
   request_timeout: 300
-  num_retries: 2
+  num_retries: 3
   retry_after: 2
   cache: true
   cache_params:
     ttl: 3600
     redis_url: redis://redis:6379/0
+  # Success callbacks for logging
+  callbacks: true
+  # Cost tracking
+  success_callback: ["log_cost"]
 
 general_settings:
   database_url: postgresql://heretek:heretek@postgres:5432/heretek
   redis_url: redis://redis:6379/0
   master_key: os.environ/LITELLM_MASTER_KEY
   environment: heretek-openclaw
+  # Logging configuration
+  log_level: INFO
 
+# ==============================================================================
+# A2A (Agent-to-Agent) Protocol Settings (Enhanced)
+# ==============================================================================
 a2a_settings:
   enabled: true
   agent_timeout: 300
   session_persistence: redis
   session_ttl: 86400
+
+  # Standard endpoints
   agent_endpoint_format: "/v1/agents/{agent_name}"
   send_message_endpoint: "/v1/agents/{agent_name}/send"
   receive_message_endpoint: "/v1/agents/{agent_name}/receive"
   health_check_endpoint: "/health"
   health_check_timeout: 10
 
+  # Task handoff (NEW)
+  task_handoff:
+    enabled: true
+    context_preservation: full
+    timeout_seconds: 60
+    task_handoff_endpoint: "/v1/agents/{agent_name}/tasks"
+    task_status_endpoint: "/v1/agents/{agent_name}/tasks/{task_id}/status"
+
+  # Streaming support (NEW)
+  streaming:
+    enabled: true
+    chunk_size: 1024
+    streaming_endpoint: "/v1/agents/{agent_name}/stream"
+
+  # Agent discovery (NEW)
+  agent_discovery:
+    enabled: true
+    heartbeat_interval: 30
+    stale_agent_timeout: 120
+    agent_cards_endpoint: "/v1/agents/.well-known"
+    discover_endpoint: "/v1/agents/discover"
+
+# ==============================================================================
+# Router Settings (Enhanced)
+# ==============================================================================
 router_settings:
-  routing_strategy: latency-based-routing
+  routing_strategy: simple-router
   enable_rate_limiting: true
   default_limit_requests: 60
   default_limit_period: 60
 
+  # Health checks before fallback (NEW)
+  model_health_check:
+    enabled: true
+    check_interval: 30
+    timeout: 10
+    unhealthy_threshold: 2
+    recovery_wait: 30
+
+# ==============================================================================
+# Fallback Models (Priority-Ordered)
+# ==============================================================================
 fallback_models:
+  # Priority 1: Primary cloud models
   - minimax/M2.5
   - glm-5
   - qwen3.5
+  # Priority 2: Secondary cloud models
+  - kimi
+  - gpt-4o-mini
+  - gemini-2.0-flash
+  # Priority 3: Premium fallback
+  - claude-sonnet-4-20250514

@@ -1,8 +1,8 @@
-# Heretek OpenClaw — Infrastructure Services
-# LiteLLM Gateway + PostgreSQL (pgvector) + Redis
+# Heretek OpenClaw — Infrastructure Services (Enhanced)
+# LiteLLM Gateway + PostgreSQL (pgvector) + Redis + Prometheus (optional)
 #
 # Architecture:
-#   ┌─────────────────────────────────────────────────────────┐
+#   ┌─────────────────────────────────────────────────────────────────────┐
 #   │                    Heretek OpenClaw                      │
 #   │  ┌───────────┐  ┌───────────┐  ┌───────────────────┐    │
 #   │  │  Agents   │──│  LiteLLM  │──│  External APIs    │    │
@@ -20,7 +20,13 @@
 #   │         │ (RAG,      │   │  rate-    │                  │
 #   │         │  vector DB)│   │  limiting)│                  │
 #   │         └───────────┘   └───────────┘                  │
-#   └─────────────────────────────────────────────────────────┘
+#   │                                                        │
+#   │         ┌─────────────┐                                  │
+#   │         │ Prometheus  │ (Optional)                       │
+#   │         │ :9090       │                                  │
+#   │         │ (metrics)   │                                  │
+#   │         └─────────────┘                                  │
+#   └─────────────────────────────────────────────────────────────────┘
 #
 # Usage:
 #   docker compose up -d
@@ -32,6 +38,7 @@
 #   litellm:    4000 (Gateway + A2A)
 #   postgres:   5432 (Database + Vector)
 #   redis:      6379 (Cache + Rate Limiting)
+#   prometheus: 9090 (Metrics - optional)
 #   ollama:     11434 (Local LLM - optional, uncomment to enable)
 
 services:
@@ -77,6 +84,13 @@ services:
       # ─────────────────────────────────────────────────────────────────────────
       - LITELLM_UI_USERNAME=${LITELLM_UI_USERNAME:-admin}
       - LITELLM_UI_PASSWORD=${LITELLM_UI_PASSWORD:-heretek-admin}
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # Observability (NEW)
+      # ─────────────────────────────────────────────────────────────────────────
+      - LITELLM_COST_TRACKING_ENABLED=${LITELLM_COST_TRACKING_ENABLED:-true}
+      - LITELLM_METRICS_ENABLED=${LITELLM_METRICS_ENABLED:-true}
+      - LITELLM_LOG_LEVEL=${LITELLM_LOG_LEVEL:-INFO}
     
     command: [
       "--config", "/app/config.yaml",
@@ -146,6 +160,31 @@ services:
       - heretek-network
 
   # ==============================================================================
+  # Prometheus — Metrics & Observability (Optional)
+  # ==============================================================================
+  # Uncomment to enable Prometheus metrics collection
+  # ==============================================================================
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: heretek-prometheus
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:9090:9090"
+  #   volumes:
+  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+  #     - prometheus_data:/prometheus
+  #   command:
+  #     - '--config.file=/etc/prometheus/prometheus.yml'
+  #     - '--storage.tsdb.path=/prometheus/data'
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   networks:
+  #     - heretek-network
+
+  # ==============================================================================
   # Ollama — Local LLM Runtime (Optional)
   # ==============================================================================
   # NOTE: Uncomment this section if you want local LLM models via Docker
@@ -177,6 +216,8 @@ volumes:
     driver: local
   redis_data:
     driver: local
+  # prometheus_data:
+  #   driver: local
   # ollama_data:
   #   driver: local
 

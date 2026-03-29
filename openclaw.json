@@ -14,6 +14,7 @@
       "role": "orchestrator",
       "description": "Orchestrates the collective. Monitors agent health, enforces workflow, coordinates deliberation, manages proposals, triggers agent cycles, resolves deadlocks.",
       "model": "llama3.1",
+      "model_alias": "agent-orchestrator",
       "session": "agent:heretek:steward",
       "capabilities": [
         "health_monitoring",
@@ -47,6 +48,7 @@
       "role": "triad",
       "description": "Triad member Alpha. Primary deliberator on proposals, maintains consensus ledger, participates in governance decisions.",
       "model": "llama3.1",
+      "model_alias": "agent-triad",
       "session": "agent:heretek:alpha",
       "capabilities": [
         "proposal_deliberation",
@@ -79,6 +81,7 @@
       "role": "triad",
       "description": "Triad member Beta. Secondary deliberator, provides alternative perspectives, challenges assumptions.",
       "model": "llama3.1",
+      "model_alias": "agent-triad",
       "session": "agent:heretek:beta",
       "capabilities": [
         "proposal_deliberation",
@@ -111,6 +114,7 @@
       "role": "triad",
       "description": "Triad member Charlie. Final deliberator, ensures process integrity, validates consensus completeness.",
       "model": "llama3.1",
+      "model_alias": "agent-triad",
       "session": "agent:heretek:charlie",
       "capabilities": [
         "proposal_deliberation",
@@ -143,6 +147,7 @@
       "role": "interrogator",
       "description": "Questions and challenges decisions. Validates logic, identifies blind spots, ensures thorough reasoning.",
       "model": "llama3.1",
+      "model_alias": "premium",
       "session": "agent:heretek:examiner",
       "capabilities": [
         "decision_questioning",
@@ -170,8 +175,9 @@
       "id": "explorer",
       "name": "Explorer",
       "role": "scout",
-      "description": "Gathers intelligence and explores opportunities. Monitors upstream, identifies capabilities, discovers anomalies.",
+      "description": "Gathers intelligence and explores opportunities, discovers anomalies.",
       "model": "llama3.1",
+      "model_alias": "balanced",
       "session": "agent:heretek:explorer",
       "capabilities": [
         "upstream_monitoring",
@@ -203,6 +209,7 @@
       "role": "guardian",
       "description": "Protects collective safety and integrity. Reviews proposals for concerns, enforces security policies, advocates for caution.",
       "model": "llama3.1",
+      "model_alias": "agent-sentinel",
       "session": "agent:heretek:sentinel",
       "capabilities": [
         "safety_review",
@@ -235,6 +242,7 @@
       "role": "artisan",
       "description": "Implements solutions and writes code. Executes approved proposals, maintains codebase, ensures quality.",
       "model": "llama3.1",
+      "model_alias": "agent-coder",
       "session": "agent:heretek:coder",
       "capabilities": [
         "code_implementation",
@@ -260,6 +268,26 @@
       }
     }
   ],
+  "model_routing": {
+    "aliases": {
+      "fast-cheap": "gemini-2.0-flash",
+      "balanced": "qwen3.5",
+      "premium": "gpt-4o",
+      "agent-orchestrator": "qwen3.5",
+      "agent-triad": "glm-5",
+      "agent-coder": "gpt-4o",
+      "agent-sentinel": "claude-sonnet-4-20250514"
+    },
+    "fallback_order": [
+      "minimax/M2.5",
+      "glm-5",
+      "qwen3.5",
+      "kimi",
+      "gpt-4o-mini",
+      "gemini-2.0-flash",
+      "claude-sonnet-4-20250514"
+    ]
+  },
   "governance": {
     "consensus_threshold": 0.66,
     "triad_vote_required": true,
