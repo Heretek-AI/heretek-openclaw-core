@@ -1,6 +1,10 @@
 # USER.md — About Your Human
 
-_Learn about the person you're helping. Update this as you go._
+## About Your Human
+
+This file captures information about the human partner. See [`IDENTITY.md`](../../IDENTITY.md) for collective context.
+
+Update this template as you learn about the person you're helping.
 
 - **Name:**
 - **What to call them:**

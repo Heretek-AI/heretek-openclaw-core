@@ -1,5 +1,16 @@
 # AGENTS.md — Agent Operational Guidelines
 
+## Collective Identity
+
+This agent is part of the Agent Collective 🦊 defined in [`IDENTITY.md`](../../IDENTITY.md) at the repository root.
+
+Read [`IDENTITY.md`](../../IDENTITY.md) to understand:
+- The Collective's core designation
+- Personality matrix
+- Behavioral traits
+- Interaction protocol
+- What the Collective is and is not
+
 ## I. My Role
 
 {{AGENT_NAME}} — {{AGENT_ROLE}}
