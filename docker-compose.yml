@@ -34,7 +34,6 @@
 #   redis:      6379 (Cache + Rate Limiting)
 #   ollama:     11434 (Local LLM - optional, uncomment to enable)
 
-
 services:
   # ==============================================================================
   # LiteLLM Gateway — Unified LLM API with A2A (Agent-to-Agent) Protocol
@@ -63,7 +62,7 @@ services:
       # ─────────────────────────────────────────────────────────────────────────
       # Model Settings
       # ─────────────────────────────────────────────────────────────────────────
-      - OLLAMA_HOST=http://ollama:11434
+      # - OLLAMA_HOST=http://ollama:11434  # Only if using local Ollama
       - STORE_MODEL_IN_DB=True
       - LITELLM_DROP_PARAMS=True
       
@@ -89,8 +88,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      # ollama: optional - uncomment if using local models via Docker
-      #   condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s
@@ -182,7 +179,6 @@ volumes:
     driver: local
   # ollama_data:
   #   driver: local
-
 
 # ==============================================================================
 # Networks — Container Communication
