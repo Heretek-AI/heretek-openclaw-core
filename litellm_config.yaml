@@ -7,7 +7,7 @@
 # Each agent has a virtual model endpoint (agent/steward, agent/alpha, etc.)
 # Users can reassign models via LiteLLM WebUI without changing openclaw.json
 #
-# DEFAULT MODEL: MiniMax M2.7 (via LiteLLM Gateway)
+# DEFAULT MODEL: MiniMax MiniMax-M2.1 (via LiteLLM Gateway)
 # FAILOVER: z.ai GLM-5 (Coding API)
 #
 # This file is mounted to the LiteLLM container at /app/config.yaml
@@ -17,26 +17,26 @@
 
 model_list:
   # ==========================================================================
-  # PRIMARY: MiniMax M2.7 (All Agents Default)
+  # PRIMARY: MiniMax MiniMax-M2.1 (All Agents Default)
   # ==========================================================================
-  - model_name: minimax/M2.7
+  - model_name: minimax/MiniMax-M2.1
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
-      description: "MiniMax M2.7 - Primary model for all agents"
+      description: "MiniMax MiniMax-M2.1 - Primary model for all agents"
       max_tokens: 128000
       input_cost_per_token: 0.0000001
       output_cost_per_token: 0.0000004
 
-  - model_name: minimax/M2.5
+  - model_name: minimax/MiniMax-M2.5
     litellm_params:
-      model: minimax/M2.5
+      model: minimax/MiniMax-M2.5
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
-      description: "MiniMax M2.5 - Fallback option"
+      description: "MiniMax MiniMax-M2.5 - Fallback option"
       max_tokens: 128000
 
   # ==========================================================================
@@ -63,14 +63,14 @@ model_list:
   # ==========================================================================
   # AGENT PASSTHROUGH ENDPOINTS (Virtual Models)
   # ==========================================================================
-  # Each agent has a virtual model that defaults to MiniMax M2.7
+  # Each agent has a virtual model that defaults to MiniMax MiniMax-M2.1
   # Users can reassign these via LiteLLM WebUI without changing openclaw.json
   # ==========================================================================
 
   # Steward (Orchestrator) - Manages collective workflow
   - model_name: agent/steward
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
@@ -81,7 +81,7 @@ model_list:
   # Alpha (Triad) - Primary deliberator
   - model_name: agent/alpha
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
@@ -92,7 +92,7 @@ model_list:
   # Beta (Triad) - Secondary deliberator
   - model_name: agent/beta
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
@@ -103,7 +103,7 @@ model_list:
   # Charlie (Triad) - Final deliberator
   - model_name: agent/charlie
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
@@ -114,7 +114,7 @@ model_list:
   # Examiner (Interrogator) - Challenges decisions
   - model_name: agent/examiner
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
@@ -125,7 +125,7 @@ model_list:
   # Explorer (Scout) - Scans for opportunities
   - model_name: agent/explorer
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
@@ -136,7 +136,7 @@ model_list:
   # Sentinel (Guardian) - Security and monitoring
   - model_name: agent/sentinel
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
@@ -147,7 +147,7 @@ model_list:
   # Coder (Artisan) - Code generation and review
   - model_name: agent/coder
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
@@ -172,13 +172,13 @@ model_list:
   # ==========================================================================
   - model_name: default
     litellm_params:
-      model: minimax/M2.7
+      model: minimax/MiniMax-M2.1
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
 
   - model_name: fast
     litellm_params:
-      model: minimax/M2.5
+      model: minimax/MiniMax-M2.5
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
 
@@ -193,7 +193,7 @@ model_list:
 # ==============================================================================
 litellm_settings:
   # Default model for requests without model specification
-  default_model: minimax/M2.7
+  default_model: minimax/MiniMax-M2.1
   
   # Drop unsupported parameters
   drop_params: true
@@ -329,8 +329,8 @@ router_settings:
   priority_fallback:
     enabled: true
     fallback_order:
-      - minimax/M2.7
-      - minimax/M2.5
+      - minimax/MiniMax-M2.1
+      - minimax/MiniMax-M2.5
       - zai/glm-5
       - zai/glm-4
 
@@ -339,8 +339,8 @@ router_settings:
 # ==============================================================================
 fallback_models:
   # Priority 1: Primary MiniMax
-  - minimax/M2.7
-  - minimax/M2.5
+  - minimax/MiniMax-M2.1
+  - minimax/MiniMax-M2.5
   # Priority 2: z.ai Coding API
   - zai/glm-5
   - zai/glm-4
