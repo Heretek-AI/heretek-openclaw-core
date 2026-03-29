@@ -215,12 +215,9 @@ litellm_settings:
     redis_url: os.environ/REDIS_URL
   
   # Callbacks for logging
-  callbacks: true
-  success_callback: ["prometheus", "langfuse"]
+  callbacks: []
+  success_callback: ["prometheus", "langfuse", "log_cost"]
   failure_callback: ["slack"]
-  
-  # Cost tracking
-  success_callback: "log_cost"
 
 # ==============================================================================
 # General Settings
