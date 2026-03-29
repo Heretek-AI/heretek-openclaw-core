@@ -11,102 +11,102 @@
 # MODEL LIST — Available Models
 # ==============================================================================
 model_list:
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   # DEFAULT MODEL: Ollama Llama 3.1 (Primary)
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   - model_name: llama3.1
     litellm_params:
       model: ollama/llama3.1
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: llama3.1:70b
     litellm_params:
       model: ollama/llama3.1:70b
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: llama3.1:8b
     litellm_params:
       model: ollama/llama3.1:8b
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   # Additional Ollama Models
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   - model_name: llama3
     litellm_params:
       model: ollama/llama3
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: qwen2.5:72b
     litellm_params:
       model: ollama/qwen2.5:72b
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: qwen2.5:32b
     litellm_params:
       model: ollama/qwen2.5:32b
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: qwen2.5:14b
     litellm_params:
       model: ollama/qwen2.5:14b
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: qwen2.5:7b
     litellm_params:
       model: ollama/qwen2.5:7b
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: mistral
     litellm_params:
       model: ollama/mistral
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: phi4
     litellm_params:
       model: ollama/phi4
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   # Ollama Embedding Models
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   - model_name: llama3-embedding
     litellm_params:
       model: ollama/llama3-embedding
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
   - model_name: nomic-embed-text
     litellm_params:
       model: ollama/nomic-embed-text
       api_key: os.environ/OLLAMA_API_KEY
-      api_base: http://host.docker.internal:11434
+      api_base: http://ollama:11434
       num_retries: 0
 
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   # Cloud Models (Optional — requires API keys)
-  # ---------------------------------------------------------------------------
+  # -------------------------------------------------------------------------
   - model_name: minimax/M2.5
     litellm_params:
       model: minimax/M2.5
@@ -184,7 +184,7 @@ litellm_settings:
     redis_url: redis://redis:6379/0
 
   # Custom embeddings base
-  custom_embeddings_base: "http://host.docker.internal:11434"
+  custom_embeddings_base: "http://ollama:11434"
 
 # ==============================================================================
 # GENERAL SETTINGS
