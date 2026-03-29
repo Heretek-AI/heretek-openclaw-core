@@ -201,7 +201,7 @@ handle_task() {
     local reply=$(echo "$response" | jq -r '.choices[0].message.content // "No response"')
     
     # Send response back
-    send_response "$(echo "$message" | jq -r '.from // 'unknown')" "$reply" "$message"
+    send_response "$(echo "$message" | jq -r '.from // "unknown"')" "$reply" "$message"
 }
 
 # Handle query message

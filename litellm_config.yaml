@@ -217,7 +217,7 @@ litellm_settings:
   # Callbacks for logging
   callbacks: []
   success_callback: ["prometheus", "langfuse", "log_cost"]
-  failure_callback: ["slack"]
+  failure_callback: []
 
 # ==============================================================================
 # General Settings
@@ -306,7 +306,7 @@ a2a_settings:
 # ==============================================================================
 router_settings:
   # Routing strategy
-  routing_strategy: simple-router
+  routing_strategy: simple-shuffle
   
   # Rate limiting
   enable_rate_limiting: true
