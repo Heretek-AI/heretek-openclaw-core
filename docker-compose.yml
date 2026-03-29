@@ -16,15 +16,19 @@
 #   │  │  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘ │   │
 #   │  └─────────────────────────────────────────────────────────────────┘   │
 #   │  ┌─────────────────────────────────────────────────────────────────┐   │
-#   │  │                   Agent Collective (8 Agents)                    │   │
+#   │  │                  Agent Collective (11 Agents)                    │   │
 #   │  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐        │   │
 #   │  │  │Steward │ │ Alpha  │ │  Beta  │ │Charlie │ │Examiner│        │   │
 #   │  │  │ :8001  │ │ :8002  │ │ :8003  │ │ :8004  │ │ :8005  │        │   │
 #   │  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘        │   │
-#   │  │  ┌────────┐ ┌────────┐ ┌────────┐                               │   │
-#   │  │  │Explorer│ │Sentinel│ │ Coder  │                               │   │
-#   │  │  │ :8006  │ │ :8007  │ │ :8008  │                               │   │
-#   │  │  └────────┘ └────────┘ └────────┘                               │   │
+#   │  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐        │   │
+#   │  │  │Explorer│ │Sentinel│ │ Coder  │ │Dreamer │ │ Empath │        │   │
+#   │  │  │ :8006  │ │ :8007  │ │ :8008  │ │ :8009  │ │ :8010  │        │   │
+#   │  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘        │   │
+#   │  │  ┌────────┐                                                      │   │
+#   │  │  │Historian│                                                     │   │
+#   │  │  │ :8011  │                                                      │   │
+#   │  │  └────────┘                                                      │   │
 #   │  └─────────────────────────────────────────────────────────────────┘   │
 #   └─────────────────────────────────────────────────────────────────────────┘
 #
@@ -39,7 +43,7 @@
 #   postgres:   5432 (Database + Vector)
 #   redis:      6379 (Cache + Rate Limiting)
 #   ollama:     11434 (Local LLM - AMD GPU)
-#   agents:     8001-8008 (Steward, Alpha, Beta, Charlie, Examiner, Explorer, Sentinel, Coder)
+#   agents:     8001-8011 (Steward, Alpha, Beta, Charlie, Examiner, Explorer, Sentinel, Coder, Dreamer, Empath, Historian)
 # ==============================================================================
 
 services:
@@ -515,6 +519,120 @@ services:
     networks:
       - heretek-network
 
+  # --- Dreamer (Visionary) ---
+  dreamer:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: dreamer
+    container_name: heretek-dreamer
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=dreamer
+      - AGENT_ROLE=visionary
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/dreamer
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/dreamer:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_dreamer:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8009:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Empath (Diplomat) ---
+  empath:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: empath
+    container_name: heretek-empath
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=empath
+      - AGENT_ROLE=diplomat
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/empath
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/empath:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_empath:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8010:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Historian (Archivist) ---
+  historian:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: historian
+    container_name: heretek-historian
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=historian
+      - AGENT_ROLE=archivist
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/historian
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/historian:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_historian:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8011:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
 # ==============================================================================
 # Volumes — Persistent Data Storage
 # ==============================================================================
@@ -547,6 +665,12 @@ volumes:
   agent_memory_sentinel:
     driver: local
   agent_memory_coder:
+    driver: local
+  agent_memory_dreamer:
+    driver: local
+  agent_memory_empath:
+    driver: local
+  agent_memory_historian:
     driver: local
 
 # ==============================================================================

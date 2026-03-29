@@ -155,6 +155,39 @@ model_list:
       agent_role: artisan
       agent_id: coder
 
+  # Dreamer (Visionary) - Creative speculation, future planning
+  - model_name: agent/dreamer
+    litellm_params:
+      model: minimax/MiniMax-M2.1
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Dreamer Agent - Visionary role"
+      agent_role: visionary
+      agent_id: dreamer
+
+  # Empath (Diplomat) - Emotional intelligence, user rapport
+  - model_name: agent/empath
+    litellm_params:
+      model: minimax/MiniMax-M2.1
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Empath Agent - Diplomat role"
+      agent_role: diplomat
+      agent_id: empath
+
+  # Historian (Archivist) - Memory keeper, context preservation
+  - model_name: agent/historian
+    litellm_params:
+      model: minimax/MiniMax-M2.1
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Historian Agent - Archivist role"
+      agent_role: archivist
+      agent_id: historian
+
   # ==========================================================================
   # OLLAMA EMBEDDING (Local - AMD GPU)
   # ==========================================================================
