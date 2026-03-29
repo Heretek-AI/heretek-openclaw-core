@@ -9,7 +9,9 @@ description: Manages a rolodex of users for learning and adding new users. Provi
 
 **Status:** ✅ Implemented (2026-03-29)
 
-**Location:** `~/.openclaw/workspace/skills/user-rolodex/`
+**Location:** `skills/user-rolodex/`
+
+**Implementation:** [`user-rolodex.sh`](user-rolodex.sh)
 
 ---
 
@@ -20,6 +22,20 @@ description: Manages a rolodex of users for learning and adding new users. Provi
 - **Interaction History:** Track all interactions with users
 - **Multi-User Support:** Manage multiple user relationships
 - **Search & Lookup:** Quick user retrieval by various attributes
+- **User Merging:** Merge duplicate profiles while preserving data
+
+## Commands
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `create` | Add new user to rolodex | `./user-rolodex.sh create --name "John Doe" --type primary` |
+| `update` | Update user information | `./user-rolodex.sh update john-doe --timezone "America/New_York"` |
+| `lookup` | Retrieve user by slug | `./user-rolodex.sh lookup john-doe` |
+| `search` | Find users by attribute | `./user-rolodex.sh search --project "heretek-openclaw"` |
+| `note` | Add interaction note | `./user-rolodex.sh note john-doe "Discussed architecture" technical 0.8` |
+| `prefer` | Learn/update preference | `./user-rolodex.sh prefer john-doe communication casual` |
+| `merge` | Merge duplicate profiles | `./user-rolodex.sh merge old-user john-doe` |
+| `list` | List all users | `./user-rolodex.sh list` |
 
 ## Configuration
 
@@ -30,26 +46,38 @@ USER_SCHEMA="${USER_SCHEMA:-./users/_schema.json}"
 USER_INDEX="${USER_INDEX:-./users/index.json}"
 ```
 
-## Usage
+## Usage Examples
 
 ```bash
-# Create new user
-./user-rolodex.sh create --name "John Doe" --preferred "John"
+# Create new user with all options
+./user-rolodex.sh create --name "John Doe" --preferred "John" --type primary --trust 0.9
 
-# Update user
-./user-rolodex.sh update john-doe --timezone "America/New_York"
+# Update user information
+./user-rolodex.sh update john-doe --timezone "America/New_York" --pronouns "he/him"
 
-# Lookup user
+# Lookup user (text or JSON format)
 ./user-rolodex.sh lookup john-doe
+./user-rolodex.sh lookup john-doe json
 
-# Search users
+# Search users by various criteria
 ./user-rolodex.sh search --project "heretek-openclaw"
+./user-rolodex.sh search --type primary
+./user-rolodex.sh search --trust 0.8
+./user-rolodex.sh search "john"
 
-# Add interaction note
-./user-rolodex.sh note john-doe "Discussed new agent architecture"
+# Add interaction note with category and importance
+./user-rolodex.sh note john-doe "Discussed new agent architecture" technical 0.8
 
-# Learn preference
-./user-rolodex.sh prefer john-doe code_style "detailed comments"
+# Learn/update preferences
+./user-rolodex.sh prefer john-doe communication casual
+./user-rolodex.sh prefer john-doe code_comments detailed
+./user-rolodex.sh prefer john-doe topics "AI agents"
+
+# Merge duplicate profiles
+./user-rolodex.sh merge old-profile john-doe
+
+# List all users
+./user-rolodex.sh list
 ```
 
 ## Directory Structure
@@ -117,6 +145,32 @@ users/
   ]
 }
 ```
+
+## Note Categories
+
+| Category | Description |
+|----------|-------------|
+| `general` | General interaction notes |
+| `technical` | Technical discussions and decisions |
+| `personal` | Personal information shared |
+| `preference` | User preference observations |
+| `feedback` | User feedback about the system |
+
+## Importance Levels
+
+| Level | Usage |
+|-------|-------|
+| `1.0` | Critical - must always remember |
+| `0.8` | High - important context |
+| `0.5` | Normal - useful information (default) |
+| `0.3` | Low - minor detail |
+| `0.1` | Minimal - trivia |
+
+## Requirements
+
+- **jq**: Required for JSON manipulation (install with `apt install jq` or `brew install jq`)
+- **bash**: Bash shell environment
+- **openssl**: For generating unique IDs (usually pre-installed)
 
 ## Integration Points
 
