@@ -119,11 +119,11 @@ services:
     ]
     depends_on:
       postgres:
-        condition: service_healthy
+        condition: service_started
       redis:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 4000 && echo 'healthy' || exit 1"]
+      test: ["CMD-SHELL", "python3 -c 'import socket; s=socket.socket(); s.settimeout(2); s.connect((\"localhost\", 4000)); print(\"healthy\")' || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -244,7 +244,7 @@ services:
       - "127.0.0.1:8001:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -282,7 +282,7 @@ services:
       - "127.0.0.1:8002:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -320,7 +320,7 @@ services:
       - "127.0.0.1:8003:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -358,7 +358,7 @@ services:
       - "127.0.0.1:8004:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -396,7 +396,7 @@ services:
       - "127.0.0.1:8005:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -434,7 +434,7 @@ services:
       - "127.0.0.1:8006:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -472,7 +472,7 @@ services:
       - "127.0.0.1:8007:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -510,7 +510,7 @@ services:
       - "127.0.0.1:8008:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -548,7 +548,7 @@ services:
       - "127.0.0.1:8009:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -586,7 +586,7 @@ services:
       - "127.0.0.1:8010:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -624,7 +624,7 @@ services:
       - "127.0.0.1:8011:8000"
     depends_on:
       litellm:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
