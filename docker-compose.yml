@@ -30,6 +30,13 @@
 #   │  │  │ :8011  │                                                      │   │
 #   │  │  └────────┘                                                      │   │
 #   │  └─────────────────────────────────────────────────────────────────┘   │
+#   │  ┌─────────────────────────────────────────────────────────────────┐   │
+#   │  │                     Web Interface                                │   │
+#   │  │  ┌────────────────────────────────────────────────────────────┐ │   │
+#   │  │  │                    Web Dashboard (:3000)                   │ │   │
+#   │  │  │  SvelteKit • TypeScript • TailwindCSS • WebSocket          │ │   │
+#   │  │  └────────────────────────────────────────────────────────────┘ │   │
+#   │  └─────────────────────────────────────────────────────────────────┘   │
 #   └─────────────────────────────────────────────────────────────────────────┘
 #
 # Usage:
@@ -43,6 +50,7 @@
 #   postgres:   5432 (Database + Vector)
 #   redis:      6379 (Cache + Rate Limiting)
 #   ollama:     11434 (Local LLM - AMD GPU)
+#   web:        3000 (Web Interface Dashboard)
 #   agents:     8001-8011 (Steward, Alpha, Beta, Charlie, Examiner, Explorer, Sentinel, Coder, Dreamer, Empath, Historian)
 # ==============================================================================
 
@@ -627,6 +635,34 @@ services:
         condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # ==============================================================================
+  # Web Interface — The Collective Dashboard
+  # ==============================================================================
+  web:
+    build:
+      context: ./web-interface
+      dockerfile: Dockerfile
+    container_name: heretek-web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - DOCKER_ENV=true
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    ports:
+      - "3000:3000"
+    depends_on:
+      litellm:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/agents"]
       interval: 30s
       timeout: 10s
       retries: 3
