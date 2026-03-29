@@ -1,32 +1,32 @@
-# Heretek OpenClaw — Infrastructure Services (Enhanced)
-# LiteLLM Gateway + PostgreSQL (pgvector) + Redis + Prometheus (optional)
+# ==============================================================================
+# Heretek OpenClaw — Infrastructure Services v2.0
+# ==============================================================================
+# Configuration: AMD GPU + MiniMax Primary + z.ai Failover
+# Passthrough Endpoints: Per-agent virtual models in LiteLLM
 #
 # Architecture:
-#   ┌─────────────────────────────────────────────────────────────────────┐
-#   │                    Heretek OpenClaw                      │
-#   │  ┌───────────┐  ┌───────────┐  ┌───────────────────┐    │
-#   │  │  Agents   │──│  LiteLLM  │──│  External APIs    │    │
-#   │  │ (Steward, │  │ :4000     │  │  (OpenAI, Anthropic,│   │
-#   │  │  Triad,   │  │           │  │   Google, etc.)   │    │
-#   │  │  etc.)    │  └─────┬─────┘  └───────────────────┘    │
-#   │  └───────────┘        │                                 │
-#   │                       │                                 │
-#   │               ┌───────┴───────┐                         │
-#   │               │               │                         │
-#   │         ┌─────▼─────┐   ┌─────▼─────┐                  │
-#   │         │ PostgreSQL │   │   Redis   │                  │
-#   │         │ :5432      │   │  :6379    │                  │
-#   │         │ + pgvector │   │ (cache,   │                  │
-#   │         │ (RAG,      │   │  rate-    │                  │
-#   │         │  vector DB)│   │  limiting)│                  │
-#   │         └───────────┘   └───────────┘                  │
-#   │                                                        │
-#   │         ┌─────────────┐                                  │
-#   │         │ Prometheus  │ (Optional)                       │
-#   │         │ :9090       │                                  │
-#   │         │ (metrics)   │                                  │
-#   │         └─────────────┘                                  │
-#   └─────────────────────────────────────────────────────────────────┘
+#   ┌─────────────────────────────────────────────────────────────────────────┐
+#   │                      Heretek OpenClaw Stack                             │
+#   │  ┌─────────────────────────────────────────────────────────────────┐   │
+#   │  │                     Core Services                                │   │
+#   │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐ │   │
+#   │  │  │ LiteLLM  │  │PostgreSQL│  │  Redis   │  │     Ollama       │ │   │
+#   │  │  │  :4000   │  │  :5432   │  │  :6379   │  │  :11434 (AMD)    │ │   │
+#   │  │  │ Gateway  │  │ +pgvector│  │  Cache   │  │  Local LLM       │ │   │
+#   │  │  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘ │   │
+#   │  └─────────────────────────────────────────────────────────────────┘   │
+#   │  ┌─────────────────────────────────────────────────────────────────┐   │
+#   │  │                   Agent Collective (8 Agents)                    │   │
+#   │  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐        │   │
+#   │  │  │Steward │ │ Alpha  │ │  Beta  │ │Charlie │ │Examiner│        │   │
+#   │  │  │ :8001  │ │ :8002  │ │ :8003  │ │ :8004  │ │ :8005  │        │   │
+#   │  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘        │   │
+#   │  │  ┌────────┐ ┌────────┐ ┌────────┐                               │   │
+#   │  │  │Explorer│ │Sentinel│ │ Coder  │                               │   │
+#   │  │  │ :8006  │ │ :8007  │ │ :8008  │                               │   │
+#   │  │  └────────┘ └────────┘ └────────┘                               │   │
+#   │  └─────────────────────────────────────────────────────────────────┘   │
+#   └─────────────────────────────────────────────────────────────────────────┘
 #
 # Usage:
 #   docker compose up -d
@@ -38,38 +38,54 @@
 #   litellm:    4000 (Gateway + A2A)
 #   postgres:   5432 (Database + Vector)
 #   redis:      6379 (Cache + Rate Limiting)
-#   prometheus: 9090 (Metrics - optional)
-#   ollama:     11434 (Local LLM - optional, uncomment to enable)
+#   ollama:     11434 (Local LLM - AMD GPU)
+#   agents:     8001-8008 (Steward, Alpha, Beta, Charlie, Examiner, Explorer, Sentinel, Coder)
+# ==============================================================================
 
 services:
   # ==============================================================================
-  # LiteLLM Gateway — Unified LLM API with A2A (Agent-to-Agent) Protocol
+  # LiteLLM Gateway — Unified LLM API with A2A Protocol
+  # ==============================================================================
+  # Passthrough Endpoints: Each agent has a virtual model (agent/steward, etc.)
+  # Users can reassign models via WebUI without changing openclaw.json
   # ==============================================================================
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
     container_name: heretek-litellm
     restart: unless-stopped
     ports:
-      - "127.0.0.1:4000:4000"
+      - "${LITELLM_PORT:-4000}:4000"
     volumes:
       - ./litellm_config.yaml:/app/config.yaml:ro
     environment:
       # ─────────────────────────────────────────────────────────────────────────
       # LiteLLM Core Settings
       # ─────────────────────────────────────────────────────────────────────────
-      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-heretek-master-key-change-me}
-      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY:-heretek-salt-change-me}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY}
       
       # ─────────────────────────────────────────────────────────────────────────
       # Database & Cache Connections
       # ─────────────────────────────────────────────────────────────────────────
-      - DATABASE_URL=postgresql://heretek:${POSTGRES_PASSWORD:-heretek}@postgres:5432/heretek
-      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # Provider API Keys
+      # ─────────────────────────────────────────────────────────────────────────
+      - MINIMAX_API_KEY=${MINIMAX_API_KEY}
+      - MINIMAX_API_BASE=${MINIMAX_API_BASE:-https://api.minimaxi.chat/v1}
+      - ZAI_API_KEY=${ZAI_API_KEY}
+      - ZAI_API_BASE=${ZAI_API_BASE:-https://api.z.ai/api/coding/paas/v4}
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # Ollama Connection
+      # ─────────────────────────────────────────────────────────────────────────
+      - OLLAMA_HOST=http://ollama:11434
       
       # ─────────────────────────────────────────────────────────────────────────
       # Model Settings
       # ─────────────────────────────────────────────────────────────────────────
-      # - OLLAMA_HOST=http://ollama:11434  # Only if using local Ollama
       - STORE_MODEL_IN_DB=True
       - LITELLM_DROP_PARAMS=True
       
@@ -83,14 +99,14 @@ services:
       # UI & Monitoring
       # ─────────────────────────────────────────────────────────────────────────
       - LITELLM_UI_USERNAME=${LITELLM_UI_USERNAME:-admin}
-      - LITELLM_UI_PASSWORD=${LITELLM_UI_PASSWORD:-heretek-admin}
+      - LITELLM_UI_PASSWORD=${LITELLM_UI_PASSWORD}
       
       # ─────────────────────────────────────────────────────────────────────────
-      # Observability (NEW)
+      # Observability
       # ─────────────────────────────────────────────────────────────────────────
       - LITELLM_COST_TRACKING_ENABLED=${LITELLM_COST_TRACKING_ENABLED:-true}
       - LITELLM_METRICS_ENABLED=${LITELLM_METRICS_ENABLED:-true}
-      - LITELLM_LOG_LEVEL=${LITELLM_LOG_LEVEL:-INFO}
+      - LITELLM_LOG_LEVEL=${LOG_LEVEL:-INFO}
     
     command: [
       "--config", "/app/config.yaml",
@@ -119,15 +135,16 @@ services:
     container_name: heretek-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: heretek
-      POSTGRES_USER: heretek
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-heretek}
+      POSTGRES_DB: ${POSTGRES_DB:-heretek}
+      POSTGRES_USER: ${POSTGRES_USER:-heretek}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init/pgvector-init.sql:/docker-entrypoint-initdb.d/pgvector-init.sql:ro
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U heretek -d heretek"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-heretek} -d ${POSTGRES_DB:-heretek}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -160,66 +177,377 @@ services:
       - heretek-network
 
   # ==============================================================================
-  # Prometheus — Metrics & Observability (Optional)
+  # Ollama — Local LLM Runtime (AMD ROCm)
   # ==============================================================================
-  # Uncomment to enable Prometheus metrics collection
+  # AMD GPU Support: Uses ROCm image with /dev/kfd and /dev/dri devices
+  # Embedding Model: nomic-embed-text-v2-moe (768 dimensions)
   # ==============================================================================
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   container_name: heretek-prometheus
-  #   restart: unless-stopped
-  #   ports:
-  #     - "127.0.0.1:9090:9090"
-  #   volumes:
-  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
-  #     - prometheus_data:/prometheus
-  #   command:
-  #     - '--config.file=/etc/prometheus/prometheus.yml'
-  #     - '--storage.tsdb.path=/prometheus/data'
-  #   healthcheck:
-  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #   networks:
-  #     - heretek-network
+  ollama:
+    image: ollama/ollama:rocm
+    container_name: heretek-ollama
+    restart: unless-stopped
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - HSA_OVERRIDE_GFX_VERSION=10.3.0
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
 
   # ==============================================================================
-  # Ollama — Local LLM Runtime (Optional)
+  # Agent Services (8 Agents)
   # ==============================================================================
-  # NOTE: Uncomment this section if you want local LLM models via Docker
-  #       Otherwise, use external Ollama or cloud APIs via litellm_config.yaml
+  # Each agent connects to LiteLLM via passthrough endpoint (agent/{name})
+  # Model assignment is managed in LiteLLM WebUI, not in agent config
   # ==============================================================================
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   container_name: heretek-ollama
-  #   restart: unless-stopped
-  #   volumes:
-  #     - ollama_data:/root/.ollama
-  #   ports:
-  #     - "127.0.0.1:11434:11434"
-  #   environment:
-  #     - OLLAMA_HOST=0.0.0.0
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:11434/"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #   networks:
-  #     - heretek-network
+  
+  # --- Steward (Orchestrator) ---
+  steward:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: steward
+    container_name: heretek-steward
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=steward
+      - AGENT_ROLE=orchestrator
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/steward
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/steward:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_steward:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8001:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Alpha (Triad) ---
+  alpha:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: alpha
+    container_name: heretek-alpha
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=alpha
+      - AGENT_ROLE=triad
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/alpha
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/alpha:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_alpha:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8002:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Beta (Triad) ---
+  beta:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: beta
+    container_name: heretek-beta
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=beta
+      - AGENT_ROLE=triad
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/beta
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/beta:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_beta:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8003:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Charlie (Triad) ---
+  charlie:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: charlie
+    container_name: heretek-charlie
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=charlie
+      - AGENT_ROLE=triad
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/charlie
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/charlie:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_charlie:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8004:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Examiner (Interrogator) ---
+  examiner:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: examiner
+    container_name: heretek-examiner
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=examiner
+      - AGENT_ROLE=interrogator
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/examiner
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/examiner:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_examiner:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8005:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Explorer (Scout) ---
+  explorer:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: explorer
+    container_name: heretek-explorer
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=explorer
+      - AGENT_ROLE=scout
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/explorer
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/explorer:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_explorer:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8006:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Sentinel (Guardian) ---
+  sentinel:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: sentinel
+    container_name: heretek-sentinel
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=sentinel
+      - AGENT_ROLE=guardian
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/sentinel
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/sentinel:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_sentinel:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8007:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
+
+  # --- Coder (Artisan) ---
+  coder:
+    build:
+      context: .
+      dockerfile: Dockerfile.agent
+      args:
+        AGENT_NAME: coder
+    container_name: heretek-coder
+    restart: unless-stopped
+    environment:
+      - AGENT_NAME=coder
+      - AGENT_ROLE=artisan
+      - LITELLM_HOST=http://litellm:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      - AGENT_MODEL=agent/coder
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    volumes:
+      - ./agents/coder:/app/agent:ro
+      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./agents/lib:/app/lib:ro
+      - ./skills:/app/skills:ro
+      - agent_memory_coder:/app/memory
+      - collective_memory:/app/collective
+      - ./modules:/app/modules:ro
+    ports:
+      - "127.0.0.1:8008:8000"
+    depends_on:
+      litellm:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - heretek-network
 
 # ==============================================================================
 # Volumes — Persistent Data Storage
 # ==============================================================================
 volumes:
+  # Core services
   postgres_data:
     driver: local
   redis_data:
     driver: local
-  # prometheus_data:
-  #   driver: local
-  # ollama_data:
-  #   driver: local
+  ollama_data:
+    driver: local
+  
+  # Collective memory (skills are bind-mounted, not a volume)
+  collective_memory:
+    driver: local
+  
+  # Per-agent memory persistence
+  agent_memory_steward:
+    driver: local
+  agent_memory_alpha:
+    driver: local
+  agent_memory_beta:
+    driver: local
+  agent_memory_charlie:
+    driver: local
+  agent_memory_examiner:
+    driver: local
+  agent_memory_explorer:
+    driver: local
+  agent_memory_sentinel:
+    driver: local
+  agent_memory_coder:
+    driver: local
 
 # ==============================================================================
 # Networks — Container Communication

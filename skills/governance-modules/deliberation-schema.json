@@ -1,0 +1,103 @@
+{
+  "$schema": "https://heretek.ai/schemas/deliberation.schema.json",
+  "title": "Deliberation Phase Record",
+  "description": "Schema for deliberation phase transitions",
+  "type": "object",
+  "required": ["proposal_id", "phase", "entered_at"],
+  "properties": {
+    "proposal_id": {
+      "type": "string"
+    },
+    "phase": {
+      "type": "string",
+      "enum": ["signal", "build", "ratify"],
+      "description": "Current deliberation phase"
+    },
+    "entered_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "exited_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When phase was exited (null if still current)"
+    },
+    "inputs": {
+      "type": "array",
+      "description": "Deliberation inputs received in this phase",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": { "type": "string" },
+          "source": { "type": "string" },
+          "summary": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "phase_notes": {
+      "type": "string",
+      "description": "Key decisions or observations from this phase"
+    },
+    "next_phase_required_action": {
+      "type": "string",
+      "description": "What must happen to move to next phase"
+    },
+    "communication": {
+      "type": "object",
+      "description": "Communication protocol used for this deliberation",
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "enum": ["A2A", "Matrix", "HTTP"],
+          "description": "Protocol used for inter-agent communication"
+        },
+        "a2a_session": {
+          "type": "string",
+          "description": "A2A session identifier"
+        },
+        "a2a_agent": {
+          "type": "string",
+          "description": "A2A agent that initiated or is processing this deliberation"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "phase": { "const": "signal" } } },
+      "then": {
+        "required": ["signal_trigger"],
+        "properties": {
+          "signal_trigger": {
+            "type": "string",
+            "description": "What triggered entry to signal phase"
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "phase": { "const": "build" } } },
+      "then": {
+        "required": ["build_response"],
+        "properties": {
+          "build_response": {
+            "type": "string",
+            "description": "How the triad is responding to the signal"
+          }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "phase": { "const": "ratify" } } },
+      "then": {
+        "required": ["vote_recorded"],
+        "properties": {
+          "vote_recorded": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  ]
+}

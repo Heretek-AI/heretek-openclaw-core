@@ -1,0 +1,31 @@
+{
+  "name": "@heretek-ai/curiosity-engine-modules",
+  "version": "1.0.0",
+  "description": "Curiosity Engine modular implementation for Tabula Myriad triad",
+  "keywords": [
+    "anomaly-detection",
+    "autonomy",
+    "curiosity",
+    "deliberation",
+    "gap-detection",
+    "triad"
+  ],
+  "license": "MIT",
+  "author": "Tabula Myriad <heretek-ai>",
+  "main": "modules/gap-detector.js",
+  "scripts": {
+    "anomaly": "node modules/anomaly-detector.js",
+    "capability": "node modules/capability-mapper.js",
+    "gap": "node modules/gap-detector.js",
+    "opportunity": "node modules/opportunity-scanner.js",
+    "run": "node curiosity-engine.js",
+    "test": "node tests/runner.js",
+    "trigger": "node modules/deliberation-trigger.js"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.6"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

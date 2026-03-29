@@ -1,218 +1,392 @@
 # ==============================================================================
-# Heretek OpenClaw — LiteLLM Configuration (Enhanced)
+# Heretek OpenClaw — LiteLLM Configuration v2.0
 # ==============================================================================
-# Model routing, embeddings, caching, A2A protocol, and observability
-# for Heretek OpenClaw
+# Configuration: AMD GPU + MiniMax Primary + z.ai Failover
+# Passthrough Endpoints: Per-agent virtual models
 #
-# DEFAULT MODEL: MiniMax M2.5 (via LiteLLM Gateway)
+# Each agent has a virtual model endpoint (agent/steward, agent/alpha, etc.)
+# Users can reassign models via LiteLLM WebUI without changing openclaw.json
+#
+# DEFAULT MODEL: MiniMax M2.7 (via LiteLLM Gateway)
+# FAILOVER: z.ai GLM-5 (Coding API)
+#
 # This file is mounted to the LiteLLM container at /app/config.yaml
-#
-# Version: 1.1.0 (Enhanced with cost-aware routing, A2A improvements)
+# Version: 2.0.0
 # Last Updated: 2026-03-29
 # ==============================================================================
 
 model_list:
-  # -------------------------------------------------------------------------
-  # DEFAULT MODEL: MiniMax M2.5 (Primary - Cloud)
-  # -------------------------------------------------------------------------
-  - model_name: minimax/M2.5
-    litellm_params:
-      model: minimax/M2.5
-      api_key: os.environ/MINIMAX_API_KEY
-      api_base: https://api.minimaxi.chat/v1
-
+  # ==========================================================================
+  # PRIMARY: MiniMax M2.7 (All Agents Default)
+  # ==========================================================================
   - model_name: minimax/M2.7
     litellm_params:
       model: minimax/M2.7
       api_key: os.environ/MINIMAX_API_KEY
-      api_base: https://api.minimaxi.chat/v1
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "MiniMax M2.7 - Primary model for all agents"
+      max_tokens: 128000
+      input_cost_per_token: 0.0000001
+      output_cost_per_token: 0.0000004
 
-  # -------------------------------------------------------------------------
-  # Model Aliases for Use Cases
-  # -------------------------------------------------------------------------
-  - model_name: fast-cheap
+  - model_name: minimax/M2.5
     litellm_params:
-      model: gemini/gemini-2.0-flash
-      api_key: os.environ/GEMINI_API_KEY
+      model: minimax/M2.5
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "MiniMax M2.5 - Fallback option"
+      max_tokens: 128000
 
-  - model_name: balanced
+  # ==========================================================================
+  # FAILOVER: z.ai GLM-5 (Coding API)
+  # ==========================================================================
+  - model_name: zai/glm-5
     litellm_params:
-      model: qwen/qwen3.5
-      api_key: os.environ/QWEN_API_KEY
-      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      model: openai/glm-5
+      api_key: os.environ/ZAI_API_KEY
+      api_base: os.environ/ZAI_API_BASE
+    model_info:
+      description: "z.ai GLM-5 - Coding API failover"
+      max_tokens: 128000
 
-  - model_name: premium
+  - model_name: zai/glm-4
     litellm_params:
-      model: openai/gpt-4o
-      api_key: os.environ/OPENAI_API_KEY
+      model: openai/glm-4
+      api_key: os.environ/ZAI_API_KEY
+      api_base: os.environ/ZAI_API_BASE
+    model_info:
+      description: "z.ai GLM-4 - Alternative failover"
+      max_tokens: 128000
 
-  # -------------------------------------------------------------------------
-  # Agent-Specific Model Assignments
-  # -------------------------------------------------------------------------
-  - model_name: agent-orchestrator
+  # ==========================================================================
+  # AGENT PASSTHROUGH ENDPOINTS (Virtual Models)
+  # ==========================================================================
+  # Each agent has a virtual model that defaults to MiniMax M2.7
+  # Users can reassign these via LiteLLM WebUI without changing openclaw.json
+  # ==========================================================================
+
+  # Steward (Orchestrator) - Manages collective workflow
+  - model_name: agent/steward
     litellm_params:
-      model: qwen/qwen3.5
-      api_key: os.environ/QWEN_API_KEY
-      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
-      num_retries: 0
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Steward Agent - Orchestrator role"
+      agent_role: orchestrator
+      agent_id: steward
 
-  - model_name: agent-triad
+  # Alpha (Triad) - Primary deliberator
+  - model_name: agent/alpha
     litellm_params:
-      model: glm/glm-5
-      api_key: os.environ/GLM_API_KEY
-      api_base: https://open.bigmodel.cn/api/paas/v4
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Alpha Agent - Triad role"
+      agent_role: triad
+      agent_id: alpha
 
-  - model_name: agent-coder
+  # Beta (Triad) - Secondary deliberator
+  - model_name: agent/beta
     litellm_params:
-      model: openai/gpt-4o
-      api_key: os.environ/OPENAI_API_KEY
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Beta Agent - Triad role"
+      agent_role: triad
+      agent_id: beta
 
-  - model_name: agent-sentinel
+  # Charlie (Triad) - Final deliberator
+  - model_name: agent/charlie
     litellm_params:
-      model: anthropic/claude-sonnet-4-20250514
-      api_key: os.environ/ANTHROPIC_API_KEY
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Charlie Agent - Triad role"
+      agent_role: triad
+      agent_id: charlie
 
-  # -------------------------------------------------------------------------
-  # Ollama Models (Optional - uncomment if using local Ollama)
-  # -------------------------------------------------------------------------
-  # - model_name: llama3.1
-  #   litellm_params:
-  #     model: ollama/llama3.1
-  #     api_key: os.environ/OLLAMA_API_KEY
-  #     api_base: http://ollama:11434
-  #     num_retries: 0
-
-  # -------------------------------------------------------------------------
-  # Cloud Models (Standard)
-  # -------------------------------------------------------------------------
-  - model_name: glm-5
+  # Examiner (Interrogator) - Challenges decisions
+  - model_name: agent/examiner
     litellm_params:
-      model: glm-5
-      api_key: os.environ/GLM_API_KEY
-      api_base: https://open.bigmodel.cn/api/paas/v4
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Examiner Agent - Interrogator role"
+      agent_role: interrogator
+      agent_id: examiner
 
-  - model_name: qwen3.5
+  # Explorer (Scout) - Scans for opportunities
+  - model_name: agent/explorer
     litellm_params:
-      model: qwen3.5
-      api_key: os.environ/QWEN_API_KEY
-      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Explorer Agent - Scout role"
+      agent_role: scout
+      agent_id: explorer
 
-  - model_name: kimi
+  # Sentinel (Guardian) - Security and monitoring
+  - model_name: agent/sentinel
     litellm_params:
-      model: kimi
-      api_key: os.environ/KIMI_API_KEY
-      api_base: https://api.moonshot.cn/v1
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Sentinel Agent - Guardian role"
+      agent_role: guardian
+      agent_id: sentinel
 
-  - model_name: gpt-4o
+  # Coder (Artisan) - Code generation and review
+  - model_name: agent/coder
     litellm_params:
-      model: openai/gpt-4o
-      api_key: os.environ/OPENAI_API_KEY
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Coder Agent - Artisan role"
+      agent_role: artisan
+      agent_id: coder
 
-  - model_name: gpt-4o-mini
+  # ==========================================================================
+  # OLLAMA EMBEDDING (Local - AMD GPU)
+  # ==========================================================================
+  - model_name: ollama/nomic-embed-text
     litellm_params:
-      model: openai/gpt-4o-mini
-      api_key: os.environ/OPENAI_API_KEY
+      model: ollama/nomic-embed-text-v2-moe
+      api_base: http://ollama:11434
+    model_info:
+      description: "Nomic Embed Text v2 MoE - 768 dimensions"
+      mode: embedding
+      embedding_dim: 768
 
-  - model_name: claude-sonnet-4-20250514
+  # ==========================================================================
+  # MODEL ALIASES (Convenience)
+  # ==========================================================================
+  - model_name: default
     litellm_params:
-      model: anthropic/claude-sonnet-4-20250514
-      api_key: os.environ/ANTHROPIC_API_KEY
+      model: minimax/M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
 
-  - model_name: gemini-2.0-flash
+  - model_name: fast
     litellm_params:
-      model: gemini/gemini-2.0-flash
-      api_key: os.environ/GEMINI_API_KEY
+      model: minimax/M2.5
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
 
+  - model_name: failover
+    litellm_params:
+      model: zai/glm-5
+      api_key: os.environ/ZAI_API_KEY
+      api_base: os.environ/ZAI_API_BASE
+
+# ==============================================================================
+# LiteLLM Settings
+# ==============================================================================
 litellm_settings:
-  default_model: minimax/M2.5
+  # Default model for requests without model specification
+  default_model: minimax/M2.7
+  
+  # Drop unsupported parameters
   drop_params: true
+  
+  # Logging verbosity
   set_verbose: false
+  
+  # Request timeout (seconds)
   request_timeout: 300
+  
+  # Retry configuration
   num_retries: 3
   retry_after: 2
+  
+  # Caching
   cache: true
   cache_params:
     ttl: 3600
-    redis_url: redis://redis:6379/0
-  # Success callbacks for logging
+    redis_url: os.environ/REDIS_URL
+  
+  # Callbacks for logging
   callbacks: true
+  success_callback: ["prometheus", "langfuse"]
+  failure_callback: ["slack"]
+  
   # Cost tracking
-  success_callback: ["log_cost"]
-
-general_settings:
-  database_url: postgresql://heretek:heretek@postgres:5432/heretek
-  redis_url: redis://redis:6379/0
-  master_key: os.environ/LITELLM_MASTER_KEY
-  environment: heretek-openclaw
-  # Logging configuration
-  log_level: INFO
+  success_callback: "log_cost"
 
 # ==============================================================================
-# A2A (Agent-to-Agent) Protocol Settings (Enhanced)
+# General Settings
+# ==============================================================================
+general_settings:
+  # Database connection
+  database_url: os.environ/DATABASE_URL
+  
+  # Redis connection
+  redis_url: os.environ/REDIS_URL
+  
+  # Master key for API authentication
+  master_key: os.environ/LITELLM_MASTER_KEY
+  
+  # Salt for encryption
+  salt_key: os.environ/LITELLM_SALT_KEY
+  
+  # Environment identifier
+  environment: heretek-openclaw
+  
+  # Logging level
+  log_level: INFO
+  
+  # UI settings
+  ui: true
+  ui_access_mode: admin
+  
+  # Proxy settings
+  proxy_batch_write_at: 60
+
+# ==============================================================================
+# A2A (Agent-to-Agent) Protocol Settings
 # ==============================================================================
 a2a_settings:
+  # Enable A2A protocol
   enabled: true
+  
+  # Agent timeout (seconds)
   agent_timeout: 300
+  
+  # Session persistence backend
   session_persistence: redis
+  
+  # Session TTL (seconds)
   session_ttl: 86400
-
-  # Standard endpoints
+  
+  # -------------------------------------------------------------------------
+  # Standard A2A Endpoints
+  # -------------------------------------------------------------------------
   agent_endpoint_format: "/v1/agents/{agent_name}"
   send_message_endpoint: "/v1/agents/{agent_name}/send"
   receive_message_endpoint: "/v1/agents/{agent_name}/receive"
   health_check_endpoint: "/health"
   health_check_timeout: 10
-
-  # Task handoff (NEW)
+  
+  # -------------------------------------------------------------------------
+  # Task Handoff (NEW)
+  # -------------------------------------------------------------------------
   task_handoff:
     enabled: true
     context_preservation: full
     timeout_seconds: 60
-    task_handoff_endpoint: "/v1/agents/{agent_name}/tasks"
-    task_status_endpoint: "/v1/agents/{agent_name}/tasks/{task_id}/status"
-
-  # Streaming support (NEW)
+  task_handoff_endpoint: "/v1/agents/{agent_name}/tasks"
+  task_status_endpoint: "/v1/agents/{agent_name}/tasks/{task_id}/status"
+  
+  # -------------------------------------------------------------------------
+  # Streaming Support (NEW)
+  # -------------------------------------------------------------------------
   streaming:
     enabled: true
     chunk_size: 1024
-    streaming_endpoint: "/v1/agents/{agent_name}/stream"
-
-  # Agent discovery (NEW)
+  streaming_endpoint: "/v1/agents/{agent_name}/stream"
+  
+  # -------------------------------------------------------------------------
+  # Agent Discovery (NEW)
+  # -------------------------------------------------------------------------
   agent_discovery:
     enabled: true
     heartbeat_interval: 30
     stale_agent_timeout: 120
-    agent_cards_endpoint: "/v1/agents/.well-known"
-    discover_endpoint: "/v1/agents/discover"
+  agent_cards_endpoint: "/v1/agents/.well-known"
+  discover_endpoint: "/v1/agents/discover"
 
 # ==============================================================================
-# Router Settings (Enhanced)
+# Router Settings
 # ==============================================================================
 router_settings:
+  # Routing strategy
   routing_strategy: simple-router
+  
+  # Rate limiting
   enable_rate_limiting: true
   default_limit_requests: 60
   default_limit_period: 60
-
-  # Health checks before fallback (NEW)
+  
+  # -------------------------------------------------------------------------
+  # Model Health Checks
+  # -------------------------------------------------------------------------
   model_health_check:
     enabled: true
     check_interval: 30
     timeout: 10
     unhealthy_threshold: 2
     recovery_wait: 30
+  
+  # -------------------------------------------------------------------------
+  # Priority-based Fallback
+  # -------------------------------------------------------------------------
+  priority_fallback:
+    enabled: true
+    fallback_order:
+      - minimax/M2.7
+      - minimax/M2.5
+      - zai/glm-5
+      - zai/glm-4
 
 # ==============================================================================
 # Fallback Models (Priority-Ordered)
 # ==============================================================================
 fallback_models:
-  # Priority 1: Primary cloud models
+  # Priority 1: Primary MiniMax
+  - minimax/M2.7
   - minimax/M2.5
-  - glm-5
-  - qwen3.5
-  # Priority 2: Secondary cloud models
-  - kimi
-  - gpt-4o-mini
-  - gemini-2.0-flash
-  # Priority 3: Premium fallback
-  - claude-sonnet-4-20250514
+  # Priority 2: z.ai Coding API
+  - zai/glm-5
+  - zai/glm-4
+
+# ==============================================================================
+# Budget & Rate Limits (Per Agent)
+# ==============================================================================
+budget_settings:
+  enabled: true
+  
+  # Per-agent budgets (tokens per day)
+  agent_budgets:
+    agent/steward: 1000000
+    agent/alpha: 500000
+    agent/beta: 500000
+    agent/charlie: 500000
+    agent/examiner: 300000
+    agent/explorer: 300000
+    agent/sentinel: 300000
+    agent/coder: 1000000
+  
+  # Global budget
+  global_budget: 5000000
+  
+  # Alert thresholds
+  alert_threshold: 0.8
+
+# ==============================================================================
+# Observability Settings
+# ==============================================================================
+observability:
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    port: 9090
+  
+  # Langfuse tracing (optional)
+  langfuse:
+    enabled: false
+    public_key: os.environ/LANGFUSE_PUBLIC_KEY
+    secret_key: os.environ/LANGFUSE_SECRET_KEY
+  
+  # Slack alerts (optional)
+  slack:
+    enabled: false
+    webhook_url: os.environ/SLACK_WEBHOOK_URL

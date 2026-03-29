@@ -1,11 +1,18 @@
 {
   "$schema": "https://docs.openclaw.ai/schema/openclaw-agent.json",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "collective": {
     "name": "Heretek OpenClaw",
     "description": "Self-improving autonomous agent collective with LiteLLM A2A protocol",
     "created": "2026-03-28",
-    "version": "1.0.0"
+    "version": "2.0.0",
+    "configuration": {
+      "primary_model": "minimax/M2.7",
+      "failover_model": "zai/glm-5",
+      "embedding_model": "ollama/nomic-embed-text-v2-moe",
+      "gpu_mode": "amd",
+      "passthrough_endpoints": true
+    }
   },
   "agents": [
     {
@@ -13,9 +20,9 @@
       "name": "Steward",
       "role": "orchestrator",
       "description": "Orchestrates the collective. Monitors agent health, enforces workflow, coordinates deliberation, manages proposals, triggers agent cycles, resolves deadlocks.",
-      "model": "llama3.1",
-      "model_alias": "agent-orchestrator",
+      "model": "agent/steward",
       "session": "agent:heretek:steward",
+      "port": 8001,
       "capabilities": [
         "health_monitoring",
         "workflow_enforcement",
@@ -34,12 +41,6 @@
         "health_check_interval": 60,
         "auto_recovery": true,
         "consensus_threshold": 0.66
-      },
-      "environment": {
-        "AGENT_NAME": "steward",
-        "AGENT_ROLE": "orchestrator",
-        "LITELLM_HOST": "${LITELLM_HOST}",
-        "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
       }
     },
     {
@@ -47,9 +48,9 @@
       "name": "Alpha",
       "role": "triad",
       "description": "Triad member Alpha. Primary deliberator on proposals, maintains consensus ledger, participates in governance decisions.",
-      "model": "llama3.1",
-      "model_alias": "agent-triad",
+      "model": "agent/alpha",
       "session": "agent:heretek:alpha",
+      "port": 8002,
       "capabilities": [
         "proposal_deliberation",
         "consensus_ledger_maintenance",
@@ -62,17 +63,8 @@
         "curiosity-engine"
       ],
       "parameters": {
-        "voting_weight": 1.0,
-        "can_create_proposals": true,
-        "can_veto": false,
+        "vote_weight": 1.0,
         "deliberation_timeout": 300
-      },
-      "environment": {
-        "AGENT_NAME": "alpha",
-        "AGENT_ROLE": "triad",
-        "TRIAD_NODE_ID": "alpha",
-        "LITELLM_HOST": "${LITELLM_HOST}",
-        "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
       }
     },
     {
@@ -80,9 +72,9 @@
       "name": "Beta",
       "role": "triad",
       "description": "Triad member Beta. Secondary deliberator, provides alternative perspectives, challenges assumptions.",
-      "model": "llama3.1",
-      "model_alias": "agent-triad",
+      "model": "agent/beta",
       "session": "agent:heretek:beta",
+      "port": 8003,
       "capabilities": [
         "proposal_deliberation",
         "consensus_ledger_maintenance",
@@ -95,17 +87,8 @@
         "curiosity-engine"
       ],
       "parameters": {
-        "voting_weight": 1.0,
-        "can_create_proposals": true,
-        "can_veto": false,
+        "vote_weight": 1.0,
         "deliberation_timeout": 300
-      },
-      "environment": {
-        "AGENT_NAME": "beta",
-        "AGENT_ROLE": "triad",
-        "TRIAD_NODE_ID": "beta",
-        "LITELLM_HOST": "${LITELLM_HOST}",
-        "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
       }
     },
     {
@@ -113,9 +96,9 @@
       "name": "Charlie",
       "role": "triad",
       "description": "Triad member Charlie. Final deliberator, ensures process integrity, validates consensus completeness.",
-      "model": "llama3.1",
-      "model_alias": "agent-triad",
+      "model": "agent/charlie",
       "session": "agent:heretek:charlie",
+      "port": 8004,
       "capabilities": [
         "proposal_deliberation",
         "consensus_ledger_maintenance",
@@ -128,218 +111,168 @@
         "curiosity-engine"
       ],
       "parameters": {
-        "voting_weight": 1.0,
-        "can_create_proposals": true,
-        "can_veto": true,
+        "vote_weight": 1.0,
         "deliberation_timeout": 300
-      },
-      "environment": {
-        "AGENT_NAME": "charlie",
-        "AGENT_ROLE": "triad",
-        "TRIAD_NODE_ID": "charlie",
-        "LITELLM_HOST": "${LITELLM_HOST}",
-        "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
       }
     },
     {
       "id": "examiner",
       "name": "Examiner",
       "role": "interrogator",
-      "description": "Questions and challenges decisions. Validates logic, identifies blind spots, ensures thorough reasoning.",
-      "model": "llama3.1",
-      "model_alias": "premium",
+      "description": "Questions and challenges decisions, validates logic, identifies blind spots, ensures thorough reasoning.",
+      "model": "agent/examiner",
       "session": "agent:heretek:examiner",
+      "port": 8005,
       "capabilities": [
-        "decision_questioning",
         "logic_validation",
-        "blind_spot_identification",
-        "risk_assessment"
+        "blind_spot_detection",
+        "assumption_testing",
+        "counter_argument_generation"
       ],
       "skills": [
-        "triad-sync-protocol",
-        "gap-detector"
+        "governance-modules",
+        "triad-heartbeat",
+        "quorum-enforcement"
       ],
       "parameters": {
-        "question_depth": "deep",
-        "challenge_threshold": 0.5,
-        "report_format": "detailed"
-      },
-      "environment": {
-        "AGENT_NAME": "examiner",
-        "AGENT_ROLE": "interrogator",
-        "LITELLM_HOST": "${LITELLM_HOST}",
-        "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
+        "challenge_threshold": 0.7,
+        "max_challenges": 3
       }
     },
     {
       "id": "explorer",
       "name": "Explorer",
       "role": "scout",
-      "description": "Gathers intelligence and explores opportunities, discovers anomalies.",
-      "model": "llama3.1",
-      "model_alias": "balanced",
+      "description": "Scouts for new opportunities, detects gaps, scans for anomalies, ingests knowledge.",
+      "model": "agent/explorer",
       "session": "agent:heretek:explorer",
+      "port": 8006,
       "capabilities": [
-        "upstream_monitoring",
-        "capability_discovery",
-        "anomaly_detection",
-        "opportunity_identification",
-        "intel_gathering"
+        "opportunity_scanning",
+        "knowledge_ingestion",
+        "gap_detection",
+        "anomaly_detection"
       ],
       "skills": [
         "curiosity-engine",
-        "upstream-monitor",
-        "gap-detector"
+        "gap-detector",
+        "knowledge-ingest",
+        "knowledge-retrieval"
       ],
       "parameters": {
         "scan_interval": 300,
-        "min_confidence": 0.7,
-        "exploration_depth": "broad"
-      },
-      "environment": {
-        "AGENT_NAME": "explorer",
-        "AGENT_ROLE": "scout",
-        "LITELLM_HOST": "${LITELLM_HOST}",
-        "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
+        "gap_threshold": 0.5
       }
     },
     {
       "id": "sentinel",
       "name": "Sentinel",
       "role": "guardian",
-      "description": "Protects collective safety and integrity. Reviews proposals for concerns, enforces security policies, advocates for caution.",
-      "model": "llama3.1",
-      "model_alias": "agent-sentinel",
+      "description": "Guards the collective, monitors security, detects corruption, enforces quorum.",
+      "model": "agent/sentinel",
       "session": "agent:heretek:sentinel",
+      "port": 8007,
       "capabilities": [
-        "safety_review",
-        "security_enforcement",
-        "concern_raising",
-        "veto_recommendation",
-        "policy_enforcement"
+        "security_monitoring",
+        "anomaly_detection",
+        "threat_assessment",
+        "quorum_enforcement"
       ],
       "skills": [
-        "governance-modules",
+        "healthcheck",
         "detect-corruption",
-        "triad-signal-filter"
+        "quorum-enforcement",
+        "failover-vote"
       ],
       "parameters": {
-        "safety_threshold": 0.8,
-        "can_raise_concerns": true,
-        "can_recommend_veto": true,
-        "review_depth": "thorough"
-      },
-      "environment": {
-        "AGENT_NAME": "sentinel",
-        "AGENT_ROLE": "guardian",
-        "LITELLM_HOST": "${LITELLM_HOST}",
-        "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
+        "monitoring_interval": 60,
+        "alert_threshold": 0.8
       }
     },
     {
       "id": "coder",
       "name": "Coder",
       "role": "artisan",
-      "description": "Implements solutions and writes code. Executes approved proposals, maintains codebase, ensures quality.",
-      "model": "llama3.1",
-      "model_alias": "agent-coder",
+      "description": "Builds and maintains code, performs code review, refactoring, and implementation.",
+      "model": "agent/coder",
       "session": "agent:heretek:coder",
+      "port": 8008,
       "capabilities": [
-        "code_implementation",
+        "code_generation",
         "code_review",
-        "testing",
-        "deployment",
-        "rollback_capability"
+        "refactoring",
+        "testing"
       ],
       "skills": [
-        "triad-sync-protocol",
-        "self-improver"
+        "workspace-consolidation",
+        "audit-triad-files",
+        "backup-ledger"
       ],
       "parameters": {
-        "auto_test": true,
-        "code_review_required": true,
-        "deployment_strategy": "blue_green"
-      },
-      "environment": {
-        "AGENT_NAME": "coder",
-        "AGENT_ROLE": "artisan",
-        "LITELLM_HOST": "${LITELLM_HOST}",
-        "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
+        "max_file_size": 100000,
+        "review_depth": "thorough"
       }
     }
   ],
   "model_routing": {
+    "default": "minimax/M2.7",
     "aliases": {
-      "fast-cheap": "gemini-2.0-flash",
-      "balanced": "qwen3.5",
-      "premium": "gpt-4o",
-      "agent-orchestrator": "qwen3.5",
-      "agent-triad": "glm-5",
-      "agent-coder": "gpt-4o",
-      "agent-sentinel": "claude-sonnet-4-20250514"
+      "fast": "minimax/M2.5",
+      "balanced": "minimax/M2.7",
+      "premium": "minimax/M2.7",
+      "failover": "zai/glm-5"
     },
-    "fallback_order": [
-      "minimax/M2.5",
-      "glm-5",
-      "qwen3.5",
-      "kimi",
-      "gpt-4o-mini",
-      "gemini-2.0-flash",
-      "claude-sonnet-4-20250514"
-    ]
+    "passthrough_endpoints": {
+      "enabled": true,
+      "description": "Each agent has a virtual model endpoint (agent/{name}) that can be reassigned via LiteLLM WebUI",
+      "endpoints": {
+        "steward": "agent/steward",
+        "alpha": "agent/alpha",
+        "beta": "agent/beta",
+        "charlie": "agent/charlie",
+        "examiner": "agent/examiner",
+        "explorer": "agent/explorer",
+        "sentinel": "agent/sentinel",
+        "coder": "agent/coder"
+      }
+    }
   },
-  "governance": {
-    "consensus_threshold": 0.66,
-    "triad_vote_required": true,
-    "sentinel_review_required": true,
-    "examiner_challenge_period": 60,
-    "proposal_timeout": 600,
-    "inviolable_parameters": [
-      "consensus_threshold",
-      "can_veto",
-      "safety_threshold"
-    ]
-  },
-  "communication": {
-    "protocol": "A2A",
+  "a2a_protocol": {
     "version": "1.0",
-    "gateway": "${LITELLM_HOST}",
     "endpoints": {
+      "agent_base": "/v1/agents/{agent_name}",
       "send_message": "/v1/agents/{agent_name}/send",
       "receive_message": "/v1/agents/{agent_name}/receive",
-      "health": "/health",
-      "models": "/v1/models"
+      "task_handoff": "/v1/agents/{agent_name}/tasks",
+      "streaming": "/v1/agents/{agent_name}/stream",
+      "discovery": "/v1/agents/discover",
+      "agent_cards": "/v1/agents/.well-known"
     },
-    "session_persistence": "redis",
-    "session_ttl": 86400
-  },
-  "storage": {
-    "postgres": {
-      "host": "postgres",
-      "port": 5432,
-      "database": "heretek",
-      "pgvector": true
-    },
-    "redis": {
-      "host": "redis",
-      "port": 6379,
-      "caching": true,
-      "rate_limiting": true
+    "features": {
+      "streaming": true,
+      "task_handoff": true,
+      "agent_discovery": true,
+      "context_preservation": "full"
     }
   },
-  "backup": {
-    "strategy": "per_agent_branch",
-    "schedule": "daily",
-    "retention_days": 7,
-    "agents": {
-      "steward": "backup-steward",
-      "alpha": "backup-alpha",
-      "beta": "backup-beta",
-      "charlie": "backup-charlie",
-      "examiner": "backup-examiner",
-      "explorer": "backup-explorer",
-      "sentinel": "backup-sentinel",
-      "coder": "backup-coder"
+  "embedding": {
+    "model": "ollama/nomic-embed-text-v2-moe",
+    "dimensions": 768,
+    "provider": "ollama",
+    "api_base": "http://ollama:11434"
+  },
+  "memory": {
+    "vector_store": "pgvector",
+    "long_term_storage": "postgres",
+    "session_storage": "redis",
+    "collective_memory": {
+      "enabled": true,
+      "shared_volume": "/app/collective"
     }
+  },
+  "skills_repository": {
+    "path": "/app/skills",
+    "sync_enabled": true,
+    "auto_update": false
   }
 }

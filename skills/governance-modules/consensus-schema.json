@@ -1,0 +1,102 @@
+{
+  "$schema": "https://heretek.ai/schemas/consensus.schema.json",
+  "title": "Consensus Decision Record",
+  "description": "Schema for ratified consensus decisions",
+  "type": "object",
+  "required": ["proposal_id", "title", "status", "votes", "timestamp", "inviolable"],
+  "properties": {
+    "proposal_id": {
+      "type": "string",
+      "pattern": "^PROPOSAL-[a-zA-Z0-9_-]+$",
+      "description": "Unique proposal identifier"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ratified", "rejected", "withdrawn", "pending"],
+      "description": "Current status of the proposal"
+    },
+    "votes": {
+      "type": "object",
+      "required": ["alpha", "beta", "charlie"],
+      "properties": {
+        "alpha": {
+          "type": "string",
+          "enum": ["YES", "NO", "SUPPORT", "ABSTAIN", null],
+          "description": "Alpha's vote (null if not yet voted)"
+        },
+        "beta": {
+          "type": "string",
+          "enum": ["YES", "NO", "SUPPORT", "ABSTAIN", null]
+        },
+        "charlie": {
+          "type": "string",
+          "enum": ["YES", "NO", "SUPPORT", "ABSTAIN", null]
+        }
+      }
+    },
+    "consensus": {
+      "type": "object",
+      "properties": {
+        "threshold": {
+          "type": "string",
+          "const": "2/3",
+          "description": "Required threshold — cannot be changed"
+        },
+        "yes_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "reached": {
+          "type": "boolean"
+        }
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "author": {
+      "type": "string",
+      "description": "Agent or user who authored the proposal"
+    },
+    "inviolable": {
+      "type": "object",
+      "description": "Record of inviolable parameters relevant to this decision",
+      "properties": {
+        "credential_policy": { "type": "boolean" },
+        "advocate_voice_rules": { "type": "boolean" },
+        "advisory_agent_constraints": { "type": "boolean" }
+      }
+    },
+    "sentinel_review": {
+      "type": "object",
+      "properties": {
+        "cleared": { "type": "boolean" },
+        "concerns": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "communication": {
+      "type": "object",
+      "description": "Communication protocol used for this decision",
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "enum": ["A2A", "Matrix", "HTTP"],
+          "description": "Protocol used for inter-agent communication"
+        },
+        "a2a_session": {
+          "type": "string",
+          "description": "A2A session identifier if using LiteLLM A2A"
+        }
+      }
+    }
+  }
+}
