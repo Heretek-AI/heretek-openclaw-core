@@ -1,5 +1,4 @@
 {
-  "$schema": "https://docs.openclaw.ai/schema/openclaw-agent.json",
   "version": "2.0.0",
   "collective": {
     "name": "Heretek OpenClaw",
