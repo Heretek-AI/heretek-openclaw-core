@@ -345,6 +345,35 @@ start_redis_subscriber() {
     return 1
 }
 
+# Start LangFuse observability client
+start_langfuse() {
+    if [ "${LANGFUSE_ENABLED:-false}" = "false" ]; then
+        log "INFO" "LangFuse disabled (LANGFUSE_ENABLED=false)"
+        return 0
+    fi
+    
+    if [ -z "${LANGFUSE_PUBLIC_KEY:-}" ] || [ -z "${LANGFUSE_SECRET_KEY:-}" ]; then
+        log "WARN" "LangFuse enabled but keys not configured"
+        return 1
+    fi
+    
+    log "INFO" "Starting LangFuse observability..."
+    
+    # Check if Node.js is available
+    if command -v node &> /dev/null; then
+        if [ -f "/app/modules/observability/langfuse-client.js" ]; then
+            log "INFO" "Initializing LangFuse client"
+            # Run in background with output to log
+            node /app/modules/observability/langfuse-client.js > /dev/null 2>&1 &
+            log "INFO" "LangFuse observability started"
+            return 0
+        fi
+    fi
+    
+    log "WARN" "LangFuse module not found"
+    return 1
+}
+
 # Main loop
 main() {
     log "INFO" "=========================================="
@@ -383,6 +412,9 @@ main() {
     
     # Start Redis subscriber for real-time A2A messaging
     start_redis_subscriber || true
+    
+    # Start LangFuse observability (if configured)
+    start_langfuse || true
     
     # Main polling loop
     log "INFO" "Entering main loop (interval: ${AGENT_LOOP_INTERVAL}s)"
