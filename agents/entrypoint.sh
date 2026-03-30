@@ -317,6 +317,34 @@ run_autonomy_modules() {
     fi
 }
 
+# Start Redis subscriber for real-time A2A messaging
+start_redis_subscriber() {
+    log "INFO" "Starting Redis subscriber for real-time A2A messaging..."
+    
+    # Check if Node.js is available
+    if command -v node &> /dev/null; then
+        # Use Node.js subscriber (recommended)
+        if [ -f "/app/lib/redis-subscriber.js" ]; then
+            log "INFO" "Starting Node.js Redis subscriber"
+            node /app/lib/redis-subscriber.js &
+            log "INFO" "Node.js Redis subscriber started"
+            return 0
+        fi
+    fi
+    
+    # Fall back to bash subscriber
+    if [ -f "/app/lib/redis-subscriber.sh" ]; then
+        log "INFO" "Starting Bash Redis subscriber"
+        chmod +x /app/lib/redis-subscriber.sh
+        /app/lib/redis-subscriber.sh &
+        log "INFO" "Bash Redis subscriber started"
+        return 0
+    fi
+    
+    log "WARN" "No Redis subscriber script found, skipping"
+    return 1
+}
+
 # Main loop
 main() {
     log "INFO" "=========================================="
@@ -352,6 +380,9 @@ main() {
     
     # Start autonomy modules
     run_autonomy_modules
+    
+    # Start Redis subscriber for real-time A2A messaging
+    start_redis_subscriber || true
     
     # Main polling loop
     log "INFO" "Entering main loop (interval: ${AGENT_LOOP_INTERVAL}s)"

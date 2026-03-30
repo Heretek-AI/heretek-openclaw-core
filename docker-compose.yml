@@ -81,6 +81,8 @@ services:
       # ─────────────────────────────────────────────────────────────────────────
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       
       # ─────────────────────────────────────────────────────────────────────────
       # Provider API Keys
@@ -240,6 +242,10 @@ services:
       - AGENT_MODEL=agent/steward
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/steward:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -278,6 +284,8 @@ services:
       - AGENT_MODEL=agent/alpha
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/alpha:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -316,6 +324,8 @@ services:
       - AGENT_MODEL=agent/beta
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/beta:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -354,6 +364,8 @@ services:
       - AGENT_MODEL=agent/charlie
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/charlie:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -392,6 +404,8 @@ services:
       - AGENT_MODEL=agent/examiner
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/examiner:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -430,6 +444,8 @@ services:
       - AGENT_MODEL=agent/explorer
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/explorer:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -468,6 +484,8 @@ services:
       - AGENT_MODEL=agent/sentinel
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/sentinel:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -506,6 +524,8 @@ services:
       - AGENT_MODEL=agent/coder
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/coder:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -544,6 +564,8 @@ services:
       - AGENT_MODEL=agent/dreamer
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/dreamer:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -582,6 +604,8 @@ services:
       - AGENT_MODEL=agent/empath
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/empath:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -620,6 +644,8 @@ services:
       - AGENT_MODEL=agent/historian
       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
       - ./agents/historian:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -656,6 +682,8 @@ services:
       - LITELLM_HOST=http://litellm:4000
       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     ports:
       - "3000:3000"
     depends_on:
