@@ -7,8 +7,8 @@
     "created": "2026-03-28",
     "version": "2.0.0",
     "configuration": {
-      "primary_model": "minimax/M2.7",
-      "failover_model": "zai/glm-5",
+      "primary_model": "minimax/MiniMax-M2.7",
+      "failover_model": "zai/glm-5-1",
       "embedding_model": "ollama/nomic-embed-text-v2-moe",
       "gpu_mode": "amd",
       "passthrough_endpoints": true
@@ -212,15 +212,87 @@
         "max_file_size": 100000,
         "review_depth": "thorough"
       }
+    },
+    {
+      "id": "dreamer",
+      "name": "Dreamer",
+      "role": "visionary",
+      "description": "Creative speculator and future planner. Explores possibilities, generates hypotheses, envisions scenarios.",
+      "model": "agent/dreamer",
+      "session": "agent:heretek:dreamer",
+      "port": 8009,
+      "capabilities": [
+        "creative_speculation",
+        "future_planning",
+        "hypothesis_generation",
+        "scenario_envisioning"
+      ],
+      "skills": [
+        "curiosity-engine",
+        "opportunity-scanner",
+        "knowledge-retrieval"
+      ],
+      "parameters": {
+        "creativity_level": 0.8,
+        "speculation_timeout": 600
+      }
+    },
+    {
+      "id": "empath",
+      "name": "Empath",
+      "role": "diplomat",
+      "description": "Emotional intelligence specialist. Builds user rapport, handles sensitive topics, manages group dynamics.",
+      "model": "agent/empath",
+      "session": "agent:heretek:empath",
+      "port": 8010,
+      "capabilities": [
+        "emotional_intelligence",
+        "rapport_building",
+        "sensitive_topic_handling",
+        "group_dynamics_management"
+      ],
+      "skills": [
+        "governance-modules",
+        "triad-sync-protocol",
+        "knowledge-retrieval"
+      ],
+      "parameters": {
+        "empathy_threshold": 0.7,
+        "rapport_weight": 0.6
+      }
+    },
+    {
+      "id": "historian",
+      "name": "Historian",
+      "role": "archivist",
+      "description": "Memory keeper and context preserver. Maintains collective knowledge, tracks decisions, archives patterns.",
+      "model": "agent/historian",
+      "session": "agent:heretek:historian",
+      "port": 8011,
+      "capabilities": [
+        "collective_memory",
+        "decision_tracking",
+        "pattern_archiving",
+        "context_preservation"
+      ],
+      "skills": [
+        "knowledge-retrieval",
+        "backup-ledger",
+        "fleet-backup"
+      ],
+      "parameters": {
+        "archive_depth": "comprehensive",
+        "memory_retention_days": 365
+      }
     }
   ],
   "model_routing": {
-    "default": "minimax/M2.7",
+    "default": "minimax/MiniMax-M2.7",
     "aliases": {
-      "fast": "minimax/M2.5",
-      "balanced": "minimax/M2.7",
-      "premium": "minimax/M2.7",
-      "failover": "zai/glm-5"
+      "fast": "minimax/MiniMax-M2.7",
+      "balanced": "minimax/MiniMax-M2.7",
+      "premium": "minimax/MiniMax-M2.7",
+      "failover": "zai/glm-5-1"
     },
     "passthrough_endpoints": {
       "enabled": true,
@@ -233,7 +305,10 @@
         "examiner": "agent/examiner",
         "explorer": "agent/explorer",
         "sentinel": "agent/sentinel",
-        "coder": "agent/coder"
+        "coder": "agent/coder",
+        "dreamer": "agent/dreamer",
+        "empath": "agent/empath",
+        "historian": "agent/historian"
       }
     }
   },
