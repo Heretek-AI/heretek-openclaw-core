@@ -374,6 +374,30 @@ start_langfuse() {
     return 1
 }
 
+# Start OpenTelemetry for distributed tracing
+start_opentelemetry() {
+    if [ "${OTEL_ENABLED:-false}" = "false" ]; then
+        log "INFO" "OpenTelemetry disabled (OTEL_ENABLED=false)"
+        return 0
+    fi
+    
+    log "INFO" "Starting OpenTelemetry for distributed tracing..."
+    
+    # Check if Node.js is available
+    if command -v node &> /dev/null; then
+        if [ -f "/app/modules/observability/opentelemetry.js" ]; then
+            log "INFO" "Initializing OpenTelemetry"
+            # Run in background with output to log
+            node /app/modules/observability/opentelemetry.js > /dev/null 2>&1 &
+            log "INFO" "OpenTelemetry tracing started"
+            return 0
+        fi
+    fi
+    
+    log "WARN" "OpenTelemetry module not found"
+    return 1
+}
+
 # Main loop
 main() {
     log "INFO" "=========================================="
@@ -415,6 +439,9 @@ main() {
     
     # Start LangFuse observability (if configured)
     start_langfuse || true
+    
+    # Start OpenTelemetry (if configured)
+    start_opentelemetry || true
     
     # Main polling loop
     log "INFO" "Entering main loop (interval: ${AGENT_LOOP_INTERVAL}s)"
