@@ -315,17 +315,30 @@ store_message() {
 run_autonomy_modules() {
     log "INFO" "Running autonomy modules..."
     
-    # Thought loop - if available
+    # Thought loop - if available (run in background as daemon)
     if [ -f "/app/modules/thought-loop/thought-loop.sh" ]; then
-        log "DEBUG" "Running thought-loop module"
-        /app/modules/thought-loop/thought-loop.sh &
+        log "INFO" "Starting thought-loop module in background"
+        ( /app/modules/thought-loop/thought-loop.sh --daemon ) > /tmp/thought-loop.out 2>&1 &
+        local thought_pid=$!
+        log "INFO" "Thought-loop started with PID $thought_pid"
+        sleep 1
+        if ! kill -0 $thought_pid 2>/dev/null; then
+            log "WARN" "Thought-loop exited immediately, check /tmp/thought-loop.out"
+        fi
+    else
+        log "INFO" "Thought-loop module not found, skipping"
     fi
     
-    # Self-model - if available
+    # Self-model - if available (run in background, but it's CLI so just init)
     if [ -f "/app/modules/self-model/self-model.js" ]; then
-        log "DEBUG" "Running self-model module"
-        node /app/modules/self-model/self-model.js &
+        log "INFO" "Initializing self-model module"
+        node /app/modules/self-model/self-model.js --summary > /tmp/self-model.out 2>&1 || true
+        log "INFO" "Self-model initialized"
+    else
+        log "INFO" "Self-model module not found, skipping"
     fi
+    
+    log "INFO" "Autonomy modules startup complete"
 }
 
 # Start Redis subscriber for real-time A2A messaging
