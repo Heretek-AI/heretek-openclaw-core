@@ -256,6 +256,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/steward:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -304,6 +308,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/alpha:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -352,6 +360,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/beta:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -400,6 +412,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/charlie:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -448,6 +464,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/examiner:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -496,6 +516,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/explorer:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -544,6 +568,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/sentinel:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -592,6 +620,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/coder:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -640,6 +672,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/dreamer:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -688,6 +724,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/empath:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
@@ -736,6 +776,10 @@ services:
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
     volumes:
       - ./agents/historian:/app/agent:ro
       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro

@@ -398,6 +398,30 @@ start_opentelemetry() {
     return 1
 }
 
+# Start Multi-Collective Registry for inter-collective communication
+start_multi_collective() {
+    if [ -z "${COLLECTIVE_NAME:-}" ]; then
+        log "INFO" "Multi-collective disabled (COLLECTIVE_NAME not set)"
+        return 0
+    fi
+    
+    log "INFO" "Starting Multi-Collective Registry..."
+    
+    # Check if Node.js is available
+    if command -v node &> /dev/null; then
+        if [ -f "/app/modules/collective/registry.js" ]; then
+            log "INFO" "Initializing Multi-Collective Registry"
+            # Run in background with output to log
+            node /app/modules/collective/registry.js > /dev/null 2>&1 &
+            log "INFO" "Multi-Collective Registry started"
+            return 0
+        fi
+    fi
+    
+    log "WARN" "Multi-Collective module not found"
+    return 1
+}
+
 # Main loop
 main() {
     log "INFO" "=========================================="
@@ -442,6 +466,9 @@ main() {
     
     # Start OpenTelemetry (if configured)
     start_opentelemetry || true
+    
+    # Start Multi-Collective Registry (if configured)
+    start_multi_collective || true
     
     # Main polling loop
     log "INFO" "Entering main loop (interval: ${AGENT_LOOP_INTERVAL}s)"
