@@ -30,13 +30,13 @@ model_list:
       input_cost_per_token: 0.0000001
       output_cost_per_token: 0.0000004
 
-  - model_name: minimax/MiniMax-M2.1
+  - model_name: minimax/MiniMax-M2.5
     litellm_params:
-      model: minimax/MiniMax-M2.1
+      model: minimax/MiniMax-M2.5
       api_key: os.environ/MINIMAX_API_KEY
       api_base: os.environ/MINIMAX_API_BASE
     model_info:
-      description: "MiniMax MiniMax-M2.1 - Legacy fallback"
+      description: "MiniMax MiniMax-M2.5 - Legacy fallback"
       max_tokens: 128000
 
   # ==========================================================================
@@ -72,7 +72,7 @@ model_list:
   # ==========================================================================
   # AGENT PASSTHROUGH ENDPOINTS (Virtual Models)
   # ==========================================================================
-  # Each agent has a virtual model that defaults to MiniMax MiniMax-M2.1
+  # Each agent has a virtual model that defaults to MiniMax MiniMax-M2.5
   # Users can reassign these via LiteLLM WebUI without changing openclaw.json
   # ==========================================================================
 
@@ -372,7 +372,7 @@ router_settings:
     enabled: true
     fallback_order:
       - minimax/MiniMax-M2.7
-      - minimax/MiniMax-M2.1
+      - minimax/MiniMax-M2.5
       - zai/glm-5-1
       - zai/glm-5
 
@@ -382,7 +382,7 @@ router_settings:
 fallback_models:
   # Priority 1: Primary MiniMax
   - minimax/MiniMax-M2.7
-  - minimax/MiniMax-M2.1
+  - minimax/MiniMax-M2.5
   # Priority 2: z.ai Coding API
   - zai/glm-5-1
   - zai/glm-5
