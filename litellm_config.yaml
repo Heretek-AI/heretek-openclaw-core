@@ -419,11 +419,18 @@ observability:
     enabled: true
     port: 9090
   
-  # Langfuse tracing (optional)
+  # Langfuse tracing
   langfuse:
-    enabled: false
+    enabled: true
     public_key: os.environ/LANGFUSE_PUBLIC_KEY
     secret_key: os.environ/LANGFUSE_SECRET_KEY
+    host: os.environ/LANGFUSE_HOST
+  
+  # OpenTelemetry tracing
+  opentelemetry:
+    enabled: true
+    exporter: os.environ/OTEL_EXPORTER_TYPE
+    endpoint: os.environ/OTEL_EXPORTER_OTLP_ENDPOINT
   
   # Slack alerts (optional)
   slack:
