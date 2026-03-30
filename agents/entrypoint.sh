@@ -41,11 +41,22 @@ mkdir -p "$STATE_DIR" "$MEMORY_DIR" "$COLLECTIVE_DIR"
 
 # Logging
 LOG_FILE="$STATE_DIR/agent.log"
+LOG_LEVEL="${LOG_LEVEL:-INFO}"
 log() {
     local level="${1:-INFO}"
     local message="${2:-}"
     local timestamp=$(date -Iseconds)
-    echo "[$timestamp] [$AGENT_NAME] [$level] $message" | tee -a "$LOG_FILE"
+    
+    # Check if we should log this level
+    local level_priority="INFO DEBUG WARN ERROR"
+    case "$LOG_LEVEL" in
+        DEBUG) level_priority="DEBUG INFO WARN ERROR" ;;
+        INFO) level_priority="INFO WARN ERROR" ;;
+        WARN) level_priority="WARN ERROR" ;;
+        ERROR) level_priority="ERROR" ;;
+    esac
+    
+    echo "$level_priority" | grep -q "$level" && echo "[$timestamp] [$AGENT_NAME] [$level] $message" | tee -a "$LOG_FILE"
 }
 
 # Health check endpoint (simple HTTP server)

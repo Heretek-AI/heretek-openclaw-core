@@ -124,7 +124,7 @@ services:
       # ─────────────────────────────────────────────────────────────────────────
       - LITELLM_COST_TRACKING_ENABLED=${LITELLM_COST_TRACKING_ENABLED:-true}
       - LITELLM_METRICS_ENABLED=${LITELLM_METRICS_ENABLED:-true}
-      - LITELLM_LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LITELLM_LOG_LEVEL=${LOG_LEVEL:-DEBUG}
     
     command: [
       "--config", "/app/config.yaml",
@@ -252,10 +252,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -304,10 +305,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -356,10 +358,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -408,10 +411,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -460,10 +464,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -512,10 +517,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -564,10 +570,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -616,10 +623,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -668,10 +676,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -720,10 +729,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
@@ -772,10 +782,11 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
