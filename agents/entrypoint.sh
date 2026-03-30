@@ -451,7 +451,7 @@ main() {
     local max_retries=30
     local retry=0
     while [ $retry -lt $max_retries ]; do
-        if curl -s -f "$LITELLM_HOST/health" > /dev/null 2>&1; then
+        if curl -s -f -H "Authorization: Bearer ${LITELLM_API_KEY}" "$LITELLM_HOST/health" > /dev/null 2>&1; then
             log "INFO" "LiteLLM is ready"
             break
         fi
