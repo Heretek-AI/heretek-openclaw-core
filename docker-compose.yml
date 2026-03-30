@@ -813,6 +813,32 @@ services:
       - heretek-network
 
   # ==============================================================================
+  # Redis-to-WebSocket Bridge — Real-time A2A Message Streaming
+  # ==============================================================================
+  # Bridges Redis Pub/Sub messages to WebSocket for real-time UI updates
+  # HTTP health check: port 3002, WebSocket: port 3003
+  # ==============================================================================
+  websocket-bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket-bridge
+    container_name: heretek-websocket-bridge
+    restart: unless-stopped
+    environment:
+      - WS_PORT=3002
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "127.0.0.1:3002:3002"
+      - "127.0.0.1:3003:3003"
+    depends_on:
+      redis:
+        condition: service_started
+    networks:
+      - heretek-network
+
+  # ==============================================================================
   # Web Interface — The Collective Dashboard
   # ==============================================================================
   web:
