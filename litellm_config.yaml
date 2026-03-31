@@ -1,5 +1,5 @@
 # ==============================================================================
-# Heretek OpenClaw — LiteLLM Configuration v2.0
+# Heretek OpenClaw — LiteLLM Configuration v2.1
 # ==============================================================================
 # Configuration: AMD GPU + MiniMax Primary + z.ai Failover
 # Passthrough Endpoints: Per-agent virtual models
@@ -11,8 +11,17 @@
 # FAILOVER: z.ai GLM-5.1 (Coding API)
 #
 # This file is mounted to the LiteLLM container at /app/config.yaml
-# Version: 2.0.0
-# Last Updated: 2026-03-29
+# Version: 2.1.0
+# Last Updated: 2026-03-31
+#
+# PROVIDER TEMPLATES: Additional provider configurations are available in:
+#   - config/providers/openai.yaml
+#   - config/providers/anthropic.yaml
+#   - config/providers/google.yaml
+#   - config/providers/ollama.yaml
+#   - config/providers/azure-openai.yaml
+#   - config/providers/xai.yaml
+#   - config/providers/combined-example.yaml
 # ==============================================================================
 
 model_list:

@@ -34,6 +34,8 @@
     "health:check": "./scripts/health-check.sh",
     "health:litellm": "python3 ./scripts/litellm-healthcheck.py",
     "backup": "./scripts/production-backup.sh",
+    "validate:config": "node scripts/validate-config.js",
+    "validate:config:strict": "node scripts/validate-config.js --strict",
     "validate:cycles": "./scripts/validate-cycles.sh",
     "ci:all": "npm run build:ci && npm run test:coverage && npm run docker:build",
     "ci:test": "npm run typecheck && npm run lint && npm run test",
