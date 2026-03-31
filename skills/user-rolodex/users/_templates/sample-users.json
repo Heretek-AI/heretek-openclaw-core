@@ -1,0 +1,93 @@
+{
+  "_comment": "Sample user profiles for testing the multi-user system",
+  "samples": [
+    {
+      "name": "Alice Chen",
+      "type": "collaborator",
+      "trust": 0.75,
+      "timezone": "America/Los_Angeles",
+      "pronouns": "she/her",
+      "platforms": {
+        "discord": { "id": "234567890", "username": "alicec" },
+        "github": { "username": "alicechen" },
+        "web": { "email": "alice@example.com" }
+      },
+      "preferences": {
+        "communicationStyle": "technical",
+        "topics_of_interest": ["machine learning", "neural networks", "agent architecture"]
+      },
+      "projects": [
+        { "name": "heretek-openclaw", "role": "lead-ml-engineer", "status": "active" }
+      ]
+    },
+    {
+      "name": "Bob Martinez",
+      "type": "partner",
+      "trust": 0.6,
+      "timezone": "America/Chicago",
+      "pronouns": "he/him",
+      "platforms": {
+        "slack": { "id": "U234567", "team_id": "T123456", "username": "bobm" },
+        "web": { "email": "bob@partnercorp.com" }
+      },
+      "preferences": {
+        "communicationStyle": "formal",
+        "response_length": "detailed"
+      },
+      "projects": [
+        { "name": "heretek-openclaw", "role": "partner-liaison", "status": "active" }
+      ]
+    },
+    {
+      "name": "Carol Williams",
+      "type": "observer",
+      "trust": 0.3,
+      "timezone": "Europe/London",
+      "pronouns": "they/them",
+      "platforms": {
+        "discord": { "id": "345678901", "username": "carolw" }
+      },
+      "preferences": {
+        "communicationStyle": "casual",
+        "response_length": "brief"
+      },
+      "projects": []
+    },
+    {
+      "name": "David Kim",
+      "type": "client",
+      "trust": 0.5,
+      "timezone": "Asia/Seoul",
+      "pronouns": "he/him",
+      "platforms": {
+        "phone": { "number": "+821012345678", "verified": true },
+        "web": { "email": "david@clientcorp.com" }
+      },
+      "preferences": {
+        "communicationStyle": "formal",
+        "response_length": "standard"
+      },
+      "projects": [
+        { "name": "heretek-openclaw", "role": "stakeholder", "status": "active" }
+      ]
+    },
+    {
+      "name": "Eve Thompson",
+      "type": "vendor",
+      "trust": 0.4,
+      "timezone": "America/New_York",
+      "pronouns": "she/her",
+      "platforms": {
+        "telegram": { "id": "456789012", "username": "evet" },
+        "web": { "email": "eve@vendor.io" }
+      },
+      "preferences": {
+        "communicationStyle": "adaptive",
+        "response_length": "standard"
+      },
+      "projects": [
+        { "name": "heretek-openclaw", "role": "cloud-provider", "status": "active" }
+      ]
+    }
+  ]
+}

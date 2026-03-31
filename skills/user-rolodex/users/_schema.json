@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User Profile Schema",
+  "description": "Schema for user profiles in the User Rolodex system",
+  "type": "object",
+  "required": ["uuid", "slug", "name", "relationship"],
+  "properties": {
+    "uuid": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Canonical UUID identifier for the user"
+    },
+    "id": {
+      "type": "string",
+      "description": "Legacy ID field"
+    },
+    "slug": {
+      "type": "string",
+      "description": "URL-safe identifier derived from name"
+    },
+    "username": {
+      "type": "string",
+      "description": "Username for the system"
+    },
+    "name": {
+      "type": "object",
+      "required": ["full", "preferred"],
+      "properties": {
+        "full": { "type": "string" },
+        "preferred": { "type": "string" },
+        "phonetic": { "type": ["string", "null"] }
+      }
+    },
+    "pronouns": {
+      "type": ["string", "null"]
+    },
+    "timezone": {
+      "type": "string",
+      "default": "UTC"
+    },
+    "languages": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["en"]
+    },
+    "platforms": {
+      "type": "object",
+      "properties": {
+        "discord": {
+          "type": "object",
+          "properties": {
+            "id": { "type": ["string", "null"] },
+            "username": { "type": ["string", "null"] },
+            "discriminator": { "type": ["string", "null"] },
+            "nickname": { "type": ["string", "null"] }
+          }
+        },
+        "phone": {
+          "type": "object",
+          "properties": {
+            "number": { "type": ["string", "null"] },
+            "verified": { "type": "boolean", "default": false }
+          }
+        },
+        "web": {
+          "type": "object",
+          "properties": {
+            "email": { "type": ["string", "null"], "format": "email" },
+            "sessions": { "type": "array" }
+          }
+        },
+        "github": {
+          "type": "object",
+          "properties": {
+            "id": { "type": ["string", "null"] },
+            "username": { "type": ["string", "null"] }
+          }
+        },
+        "slack": {
+          "type": "object",
+          "properties": {
+            "id": { "type": ["string", "null"] },
+            "team_id": { "type": ["string", "null"] },
+            "username": { "type": ["string", "null"] }
+          }
+        },
+        "telegram": {
+          "type": "object",
+          "properties": {
+            "id": { "type": ["string", "null"] },
+            "username": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "communicationStyle": { "type": "string", "enum": ["casual", "formal", "adaptive", "technical", "minimal"] },
+        "response_length": { "type": "string", "enum": ["brief", "standard", "detailed", "adaptive"] },
+        "preferredAgents": { "type": "array", "items": { "type": "string" } },
+        "code_style": {
+          "type": "object",
+          "properties": {
+            "comments": { "type": "string", "enum": ["minimal", "standard", "detailed"] },
+            "naming": { "type": "string", "enum": ["concise", "descriptive"] },
+            "formatting": { "type": ["string", "null"] }
+          }
+        },
+        "topics_of_interest": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "created": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "lastActive": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "last_interaction": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["type", "since", "trust_level"],
+      "properties": {
+        "type": { "type": "string", "enum": ["primary", "collaborator", "partner", "observer", "client", "vendor", "other"] },
+        "since": { "type": "string", "format": "date-time" },
+        "trust_level": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "projects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "role": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "completed", "paused", "archived"] },
+          "joined": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "context_notes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "date": { "type": "string", "format": "date-time" },
+          "note": { "type": "string" },
+          "importance": { "type": "number", "minimum": 0, "maximum": 1 },
+          "category": { "type": "string", "enum": ["general", "technical", "personal", "preference", "feedback"] }
+        }
+      }
+    },
+    "sessions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "startedAt": { "type": "string", "format": "date-time" },
+          "endedAt": { "type": "string", "format": "date-time" },
+          "agent": { "type": "string" },
+          "summary": { "type": "string" }
+        }
+      }
+    }
+  }
+}

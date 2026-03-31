@@ -1,183 +1,245 @@
 ---
 name: user-rolodex
-description: Manages a rolodex of users for learning and adding new users. Provides tools for user profile management, preference tracking, and relationship building.
+description: Multi-user management system with identity resolution, relationship tracking, and preference learning for personalized agent interactions.
 ---
 
-# User Rolodex — Multi-User Management
+# User Rolodex — Multi-User Management System
 
-**Purpose:** Transform single USER.md into a learnable, extensible user rolodex.
+**Purpose:** Comprehensive multi-user management with identity resolution, relationship tracking, and preference learning.
 
-**Status:** ✅ Implemented (2026-03-29)
+**Status:** ✅ Multi-User Enabled (Phase 8 Complete)
 
 **Location:** `skills/user-rolodex/`
 
-**Implementation:** [`user-rolodex.sh`](user-rolodex.sh)
+**Core Modules:**
+- [`user-rolodex.js`](user-rolodex.js) - User profile management
+- [`identity-resolution.js`](identity-resolution.js) - Multi-platform identity resolution
+- [`relationship-tracker.js`](relationship-tracker.js) - Trust and relationship tracking
 
 ---
 
 ## Features
 
-- **User Profiles:** Structured user data storage
-- **Preference Learning:** Implicit and explicit preference tracking
-- **Interaction History:** Track all interactions with users
-- **Multi-User Support:** Manage multiple user relationships
-- **Search & Lookup:** Quick user retrieval by various attributes
-- **User Merging:** Merge duplicate profiles while preserving data
+### User Profile Management
+- **Structured Profiles:** UUID-based canonical identifiers with full metadata
+- **User Types:** Primary, Collaborator, Partner, Observer, Client, Vendor, Agent
+- **Preference Learning:** Communication style, response length, code style, topics of interest
+- **Project Associations:** Track user roles across multiple projects
+- **Context Notes:** Categorized notes with importance scoring
+
+### Identity Resolution
+- **Multi-Platform Support:** Discord, Phone, Email, GitHub, Slack, Telegram
+- **Universal Lookup:** Resolve any identifier to user profile
+- **Cross-Platform Linking:** Link multiple identities to single UUID
+- **Fast Index:** Pre-built identity index for O(1) lookups
+- **Verification Status:** Track identity verification per platform
+
+### Relationship Tracking
+- **Trust Levels:** 0.0 - 1.0 scale with type-based constraints
+- **Relationship Graph:** Visualize connections between users and agents
+- **History Tracking:** Complete audit trail of relationship changes
+- **Agent Relations:** Track user-agent interaction patterns
+- **Trust Adjustments:** Automatic adjustments based on interaction outcomes
+
+---
 
 ## Commands
 
+### User Management (`user-rolodex.js`)
+
 | Command | Description | Example |
 |---------|-------------|---------|
-| `create` | Add new user to rolodex | `./user-rolodex.sh create --name "John Doe" --type primary` |
-| `update` | Update user information | `./user-rolodex.sh update john-doe --timezone "America/New_York"` |
-| `lookup` | Retrieve user by slug | `./user-rolodex.sh lookup john-doe` |
-| `search` | Find users by attribute | `./user-rolodex.sh search --project "heretek-openclaw"` |
-| `note` | Add interaction note | `./user-rolodex.sh note john-doe "Discussed architecture" technical 0.8` |
-| `prefer` | Learn/update preference | `./user-rolodex.sh prefer john-doe communication casual` |
-| `merge` | Merge duplicate profiles | `./user-rolodex.sh merge old-user john-doe` |
-| `list` | List all users | `./user-rolodex.sh list` |
+| `create` | Add new user to rolodex | `node user-rolodex.js create --name "John Doe" --type collaborator` |
+| `lookup <slug>` | Retrieve user by slug | `node user-rolodex.js lookup john-doe --json` |
+| `update <slug>` | Update user information | `node user-rolodex.js update john-doe --timezone "America/New_York"` |
+| `search` | Find users by attribute | `node user-rolodex.js search --project "heretek-openclaw"` |
+| `note <slug> <note>` | Add interaction note | `node user-rolodex.js note john-doe "Discussed architecture" --category technical` |
+| `prefer <slug>` | Learn/update preference | `node user-rolodex.js prefer john-doe communication technical` |
+| `merge <src> <tgt>` | Merge duplicate profiles | `node user-rolodex.js merge old-profile john-doe` |
+| `list` | List all users | `node user-rolodex.js list --json` |
 
-## Configuration
+### Identity Resolution (`identity-resolution.js`)
 
-```bash
-# Environment Variables
-USERS_DIR="${USERS_DIR:-./users}"
-USER_SCHEMA="${USER_SCHEMA:-./users/_schema.json}"
-USER_INDEX="${USER_INDEX:-./users/index.json}"
-```
+| Command | Description | Example |
+|---------|-------------|---------|
+| `lookup-discord <id>` | Find user by Discord ID | `node identity-resolution.js lookup-discord 123456789` |
+| `lookup-email <email>` | Find user by email | `node identity-resolution.js lookup-email user@example.com` |
+| `lookup-phone <phone>` | Find user by phone | `node identity-resolution.js lookup-phone +15551234567` |
+| `lookup-github <user>` | Find user by GitHub | `node identity-resolution.js lookup-github johnd` |
+| `resolve <identifier>` | Universal lookup | `node identity-resolution.js resolve 123456789` |
+| `link <slug>` | Link platform identity | `node identity-resolution.js link john-doe --discord 123456789` |
+| `unlink <slug> <platform>` | Remove identity | `node identity-resolution.js unlink john-doe discord` |
+| `identities <slug>` | Show all identities | `node identity-resolution.js identities john-doe` |
+| `build-index` | Build fast lookup index | `node identity-resolution.js build-index` |
+| `fast-lookup <id>` | Indexed lookup | `node identity-resolution.js fast-lookup john@example.com` |
 
-## Usage Examples
+### Relationship Tracking (`relationship-tracker.js`)
 
-```bash
-# Create new user with all options
-./user-rolodex.sh create --name "John Doe" --preferred "John" --type primary --trust 0.9
+| Command | Description | Example |
+|---------|-------------|---------|
+| `set-trust <slug> <level>` | Set trust level (0.0-1.0) | `node relationship-tracker.js set-trust john-doe 0.85` |
+| `get-trust <slug>` | Get current trust | `node relationship-tracker.js get-trust john-doe` |
+| `adjust-trust <slug> <delta>` | Adjust trust by delta | `node relationship-tracker.js adjust-trust john-doe 0.05` |
+| `set-type <slug>` | Set relationship type | `node relationship-tracker.js set-type john-doe --type collaborator` |
+| `add-relation <s1> <s2>` | Add user relationship | `node relationship-tracker.js add-relation john-doe jane-doe` |
+| `add-agent <slug> <agent>` | Add agent relationship | `node relationship-tracker.js add-agent john-doe agent-alpha` |
+| `history <slug>` | Get relationship history | `node relationship-tracker.js history john-doe` |
+| `graph` | Show relationship graph | `node relationship-tracker.js graph --json` |
+| `types` | List relationship types | `node relationship-tracker.js types` |
 
-# Update user information
-./user-rolodex.sh update john-doe --timezone "America/New_York" --pronouns "he/him"
+---
 
-# Lookup user (text or JSON format)
-./user-rolodex.sh lookup john-doe
-./user-rolodex.sh lookup john-doe json
+## Relationship Types
 
-# Search users by various criteria
-./user-rolodex.sh search --project "heretek-openclaw"
-./user-rolodex.sh search --type primary
-./user-rolodex.sh search --trust 0.8
-./user-rolodex.sh search "john"
+| Type | Default Trust | Range | Description |
+|------|---------------|-------|-------------|
+| `primary` | 0.9 | 0.8-1.0 | Main project owner/leader |
+| `collaborator` | 0.7 | 0.5-0.9 | Active development partner |
+| `partner` | 0.6 | 0.4-0.8 | Strategic organization |
+| `observer` | 0.3 | 0.1-0.5 | Passive viewer |
+| `client` | 0.5 | 0.3-0.7 | External customer |
+| `vendor` | 0.4 | 0.2-0.6 | Service provider |
+| `agent` | 0.8 | 0.5-1.0 | AI agent in collective |
 
-# Add interaction note with category and importance
-./user-rolodex.sh note john-doe "Discussed new agent architecture" technical 0.8
-
-# Learn/update preferences
-./user-rolodex.sh prefer john-doe communication casual
-./user-rolodex.sh prefer john-doe code_comments detailed
-./user-rolodex.sh prefer john-doe topics "AI agents"
-
-# Merge duplicate profiles
-./user-rolodex.sh merge old-profile john-doe
-
-# List all users
-./user-rolodex.sh list
-```
+---
 
 ## Directory Structure
 
 ```
-users/
-├── _schema.json           # User schema definition
-├── index.json             # Quick lookup index
+skills/user-rolodex/
+├── SKILL.md
+├── user-rolodex.js              # Core user management
+├── identity-resolution.js       # Identity resolution
+├── relationship-tracker.js      # Relationship tracking
+├── package.json
+├── README.md
 │
-├── john-doe/              # User directory (slugified name)
-│   ├── profile.json       # Structured user data
-│   ├── preferences.json   # Learned preferences
-│   ├── history.json       # Interaction history
-│   ├── projects.json      # Associated projects
-│   └── notes/             # Free-form notes
-│       └── 2026-03-29.md
-│
-└── _templates/
-    └── new-user.json      # Template for new users
+└── users/
+    ├── _schema.json             # User schema
+    ├── _identity-index.json     # Fast lookup index
+    ├── index.json               # User index
+    │
+    ├── _templates/              # Profile templates
+    │   ├── README.md
+    │   ├── primary-user.json
+    │   ├── collaborator-user.json
+    │   ├── partner-user.json
+    │   ├── observer-user.json
+    │   └── client-user.json
+    │
+    ├── _relationships/          # Relationship data
+    │   ├── graph.json
+    │   └── history.json
+    │
+    └── <user-slug>/
+        ├── profile.json
+        ├── preferences.json
+        └── history.json
 ```
-
-## User Schema
-
-```json
-{
-  "id": "uuid",
-  "slug": "john-doe",
-  "name": {
-    "full": "John Doe",
-    "preferred": "John",
-    "phonetic": null
-  },
-  "pronouns": "he/him",
-  "timezone": "America/New_York",
-  "languages": ["en"],
-  "created": "2026-03-29T00:00:00Z",
-  "last_interaction": "2026-03-29T04:00:00Z",
-  "relationship": {
-    "type": "primary",
-    "since": "2026-03-29T00:00:00Z",
-    "trust_level": 0.9
-  },
-  "preferences": {
-    "communication_style": "casual",
-    "response_length": "detailed",
-    "code_style": {
-      "comments": "detailed",
-      "naming": "descriptive"
-    },
-    "topics_of_interest": ["AI", "agents", "consciousness"]
-  },
-  "projects": [
-    {
-      "name": "heretek-openclaw",
-      "role": "owner",
-      "status": "active"
-    }
-  ],
-  "context_notes": [
-    {
-      "date": "2026-03-29T04:00:00Z",
-      "note": "Working on autonomous agent collective",
-      "importance": 0.9
-    }
-  ]
-}
-```
-
-## Note Categories
-
-| Category | Description |
-|----------|-------------|
-| `general` | General interaction notes |
-| `technical` | Technical discussions and decisions |
-| `personal` | Personal information shared |
-| `preference` | User preference observations |
-| `feedback` | User feedback about the system |
-
-## Importance Levels
-
-| Level | Usage |
-|-------|-------|
-| `1.0` | Critical - must always remember |
-| `0.8` | High - important context |
-| `0.5` | Normal - useful information (default) |
-| `0.3` | Low - minor detail |
-| `0.1` | Minimal - trivia |
-
-## Requirements
-
-- **jq**: Required for JSON manipulation (install with `apt install jq` or `brew install jq`)
-- **bash**: Bash shell environment
-- **openssl**: For generating unique IDs (usually pre-installed)
-
-## Integration Points
-
-- **Empath Agent:** Primary consumer of user data
-- **Memory System:** User data stored in episodic memory
-- **A2A Protocol:** User context in agent communications
 
 ---
 
-*User Rolodex - Building relationships, one interaction at a time.*
+## Usage Examples
+
+### Create and Configure User
+
+```bash
+# Create collaborator with full setup
+node user-rolodex.js create --name "Jane Smith" --type collaborator --trust 0.7
+node identity-resolution.js link jane-smith --discord 987654321 --discord-username janes
+node identity-resolution.js link jane-smith --email jane@example.com
+node identity-resolution.js link jane-smith --github janesmith
+node identity-resolution.js build-index
+
+# Set preferences
+node user-rolodex.js prefer jane-smith communication technical
+node user-rolodex.js prefer jane-smith code_comments detailed
+node user-rolodex.js prefer jane-smith topic "distributed systems"
+
+# Add context note
+node user-rolodex.js note jane-smith "Lead developer on microservices project" --category technical --importance 0.8
+```
+
+### Identity Resolution
+
+```bash
+# Find user by any identifier
+node identity-resolution.js resolve 987654321           # Discord ID
+node identity-resolution.js resolve jane@example.com     # Email
+node identity-resolution.js resolve janesmith            # GitHub
+
+# Fast lookup after building index
+node identity-resolution.js fast-lookup jane@example.com
+```
+
+### Trust Management
+
+```bash
+# Set initial trust
+node relationship-tracker.js set-trust jane-smith 0.75
+
+# Adjust based on interactions
+node relationship-tracker.js adjust-trust jane-smith 0.05 --reason "valuable_contribution"
+node relationship-tracker.js adjust-trust bob -0.1 --reason "policy_violation"
+
+# View trust history
+node relationship-tracker.js history jane-smith --json
+```
+
+---
+
+## Programmatic API
+
+```javascript
+const { UserRolodex } = require('./user-rolodex.js');
+const { IdentityResolver } = require('./identity-resolution.js');
+const { RelationshipTracker } = require('./relationship-tracker.js');
+
+// User Management
+const rolodex = new UserRolodex();
+const user = rolodex.createUser({ 
+    name: "John Doe", 
+    type: "collaborator",
+    trust: 0.7 
+});
+
+// Identity Resolution
+const resolver = new IdentityResolver();
+resolver.linkDiscord("john-doe", "123456789", "johnd");
+resolver.linkEmail("john-doe", "john@example.com");
+const result = resolver.findByEmail("john@example.com");
+
+// Relationship Tracking
+const tracker = new RelationshipTracker();
+tracker.setTrustLevel("john-doe", 0.85, "promoted");
+tracker.addAgentRelationship("john-doe", "agent-alpha");
+const graph = tracker.getGraph();
+```
+
+---
+
+## Integration Points
+
+- **Empath Agent:** Primary consumer of user data for personalized interactions
+- **Memory System:** User profiles and interaction history in episodic memory
+- **A2A Protocol:** User context in agent-to-agent communications
+- **Security Module:** Trust-based permission enforcement
+
+---
+
+## Requirements
+
+- **Node.js:** v14+ for JavaScript modules
+- **jq:** For shell script JSON manipulation
+- **openssl:** For UUID generation (usually pre-installed)
+
+---
+
+## Documentation
+
+- [User Management Guide](../../docs/users/USER_MANAGEMENT.md)
+- [User Profile Templates](users/_templates/README.md)
+
+---
+
+*User Rolodex - Building personalized agent interactions through comprehensive user understanding.*

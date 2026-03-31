@@ -1,0 +1,83 @@
+{
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "id": "user-derek-primary",
+  "slug": "derek",
+  "username": "derek",
+  "name": {
+    "full": "Derek",
+    "preferred": "Derek",
+    "phonetic": null
+  },
+  "pronouns": null,
+  "timezone": "America/New_York",
+  "languages": ["en"],
+  "platforms": {
+    "discord": {
+      "id": "123456789",
+      "username": "derek",
+      "discriminator": null,
+      "nickname": null
+    },
+    "phone": {
+      "number": "+15551234567",
+      "verified": true
+    },
+    "web": {
+      "email": "derek@example.com",
+      "sessions": []
+    },
+    "github": {
+      "id": null,
+      "username": null
+    }
+  },
+  "preferences": {
+    "communicationStyle": "adaptive",
+    "response_length": "adaptive",
+    "preferredAgents": ["alpha", "coder", "steward"],
+    "code_style": {
+      "comments": "standard",
+      "naming": "descriptive",
+      "formatting": null
+    },
+    "topics_of_interest": [
+      "AI agents",
+      "autonomous systems",
+      "consciousness emulation",
+      "RAG systems",
+      "distributed systems"
+    ]
+  },
+  "createdAt": "2026-03-01T00:00:00Z",
+  "created": "2026-03-01T00:00:00Z",
+  "lastActive": "2026-03-29T20:40:00Z",
+  "last_interaction": "2026-03-29T04:09:00Z",
+  "relationship": {
+    "type": "primary",
+    "since": "2026-03-01T00:00:00Z",
+    "trust_level": 1.0
+  },
+  "projects": [
+    {
+      "name": "heretek-openclaw",
+      "role": "owner",
+      "status": "active",
+      "joined": "2026-03-01T00:00:00Z"
+    }
+  ],
+  "context_notes": [
+    {
+      "date": "2026-03-29T04:00:00Z",
+      "note": "Working on autonomous overnight operations. Building agent collective with consciousness emulation capabilities.",
+      "importance": 0.9,
+      "category": "technical"
+    },
+    {
+      "date": "2026-03-29T03:56:00Z",
+      "note": "Going to bed but wants autonomous operation to continue throughout the night with regular commits to GitHub.",
+      "importance": 0.8,
+      "category": "general"
+    }
+  ],
+  "sessions": []
+}

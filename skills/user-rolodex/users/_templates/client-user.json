@@ -1,0 +1,66 @@
+{
+  "_comment": "Template for Client - External customer or stakeholder",
+  "uuid": "{{UUID}}",
+  "slug": "{{SLUG}}",
+  "username": "{{USERNAME}}",
+  "name": {
+    "full": "{{FULL_NAME}}",
+    "preferred": "{{PREFERRED_NAME}}",
+    "phonetic": null
+  },
+  "pronouns": "{{PRONOUNS}}",
+  "timezone": "{{TIMEZONE}}",
+  "languages": ["en"],
+  "platforms": {
+    "discord": {
+      "id": null,
+      "username": null,
+      "discriminator": null,
+      "nickname": null
+    },
+    "phone": {
+      "number": null,
+      "verified": false
+    },
+    "web": {
+      "email": null,
+      "sessions": []
+    },
+    "github": {
+      "id": null,
+      "username": null
+    },
+    "slack": {
+      "id": null,
+      "team_id": null,
+      "username": null
+    },
+    "telegram": {
+      "id": null,
+      "username": null
+    }
+  },
+  "preferences": {
+    "communicationStyle": "formal",
+    "response_length": "standard",
+    "preferredAgents": [],
+    "code_style": {
+      "comments": "standard",
+      "naming": "descriptive",
+      "formatting": null
+    },
+    "topics_of_interest": []
+  },
+  "createdAt": "{{CREATED_AT}}",
+  "created": "{{CREATED_AT}}",
+  "lastActive": "{{CREATED_AT}}",
+  "last_interaction": "{{CREATED_AT}}",
+  "relationship": {
+    "type": "client",
+    "since": "{{CREATED_AT}}",
+    "trust_level": 0.5
+  },
+  "projects": [],
+  "context_notes": [],
+  "sessions": []
+}
