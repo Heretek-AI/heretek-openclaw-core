@@ -20,70 +20,169 @@
         "base_url": "http://localhost:4000",
         "models": [
           {
-            "name": "agent/steward",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Steward Agent - Orchestrator role"
+            "id": "agent/steward",
+            "name": "steward",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/alpha",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Alpha Agent - Triad role"
+            "id": "agent/alpha",
+            "name": "alpha",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/beta",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Beta Agent - Triad role"
+            "id": "agent/beta",
+            "name": "beta",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/charlie",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Charlie Agent - Triad role"
+            "id": "agent/charlie",
+            "name": "charlie",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/examiner",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Examiner Agent - Interrogator role"
+            "id": "agent/examiner",
+            "name": "examiner",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/explorer",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Explorer Agent - Scout role"
+            "id": "agent/explorer",
+            "name": "explorer",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/sentinel",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Sentinel Agent - Guardian role"
+            "id": "agent/sentinel",
+            "name": "sentinel",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/coder",
-            "provider": "zai",
-            "model": "GLM-4",
-            "description": "Coder Agent - Artisan role (GLM-4 via z.ai passthrough)"
+            "id": "agent/coder",
+            "name": "coder",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/dreamer",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Dreamer Agent - Visionary role"
+            "id": "agent/dreamer",
+            "name": "dreamer",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/empath",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Empath Agent - Diplomat role"
+            "id": "agent/empath",
+            "name": "empath",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           },
           {
-            "name": "agent/historian",
-            "provider": "minimax",
-            "model": "MiniMax abab6.5s-chat",
-            "description": "Historian Agent - Archivist role"
+            "id": "agent/historian",
+            "name": "historian",
+            "api": "openai-completions",
+            "reasoning": true,
+            "input": ["text", "image"],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
           }
         ]
       }
