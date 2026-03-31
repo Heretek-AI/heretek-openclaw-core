@@ -38,7 +38,9 @@
     "ci:all": "npm run build:ci && npm run test:coverage && npm run docker:build",
     "ci:test": "npm run typecheck && npm run lint && npm run test",
     "ci:security": "npm audit --audit-level=moderate",
-    "ci:docs": "markdownlint '**/*.md' --ignore node_modules"
+    "ci:docs": "markdownlint '**/*.md' --ignore node_modules",
+    "test:e2e:playwright": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "keywords": [
     "ai",
@@ -67,6 +69,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
+    "@playwright/test": "^1.42.0",
     "@types/node": "^20.11.0",
     "@vitest/coverage-v8": "^1.3.0",
     "@vitest/ui": "^1.3.0",
