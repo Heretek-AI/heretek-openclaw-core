@@ -1,8 +1,8 @@
 # ==============================================================================
-# Heretek OpenClaw — Infrastructure Services v2.0
+# Heretek OpenClaw — Infrastructure Services v2.1 (OpenClaw Gateway)
 # ==============================================================================
 # Configuration: AMD GPU + MiniMax Primary + z.ai Failover
-# Passthrough Endpoints: Per-agent virtual models in LiteLLM
+# Gateway: OpenClaw Gateway v2026.3.28 on port 18789
 #
 # Architecture:
 #   ┌─────────────────────────────────────────────────────────────────────────┐
@@ -16,19 +16,12 @@
 #   │  │  └──────────┘  └──────────┘  └──────────┘  └──────────────────┘ │   │
 #   │  └─────────────────────────────────────────────────────────────────┘   │
 #   │  ┌─────────────────────────────────────────────────────────────────┐   │
-#   │  │                  Agent Collective (11 Agents)                    │   │
-#   │  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐        │   │
-#   │  │  │Steward │ │ Alpha  │ │  Beta  │ │Charlie │ │Examiner│        │   │
-#   │  │  │ :8001  │ │ :8002  │ │ :8003  │ │ :8004  │ │ :8005  │        │   │
-#   │  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘        │   │
-#   │  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐        │   │
-#   │  │  │Explorer│ │Sentinel│ │ Coder  │ │Dreamer │ │ Empath │        │   │
-#   │  │  │ :8006  │ │ :8007  │ │ :8008  │ │ :8009  │ │ :8010  │        │   │
-#   │  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘        │   │
-#   │  │  ┌────────┐                                                      │   │
-#   │  │  │Historian│                                                     │   │
-#   │  │  │ :8011  │                                                      │   │
-#   │  │  └────────┘                                                      │   │
+#   │  │              OpenClaw Gateway (Port 18789)                       │   │
+#   │  │  All 12 agents run as workspaces within Gateway process          │   │
+#   │  │  Agent workspaces: ~/.openclaw/agents/{agent}/                   │   │
+#   │  │                                                                  │   │
+#   │  │  Agents: main, steward, alpha, beta, charlie, examiner,          │   │
+#   │  │          explorer, sentinel, coder, dreamer, empath, historian   │   │
 #   │  └─────────────────────────────────────────────────────────────────┘   │
 #   │  ┌─────────────────────────────────────────────────────────────────┐   │
 #   │  │                     Web Interface                                │   │
@@ -51,7 +44,7 @@
 #   redis:      6379 (Cache + Rate Limiting)
 #   ollama:     11434 (Local LLM - AMD GPU)
 #   web:        3000 (Web Interface Dashboard)
-#   agents:     8001-8011 (Steward, Alpha, Beta, Charlie, Examiner, Explorer, Sentinel, Coder, Dreamer, Empath, Historian)
+#   gateway:    18789 (OpenClaw Gateway - all 12 agents)
 # ==============================================================================
 
 services:
@@ -223,600 +216,11 @@ services:
       - heretek-network
 
   # ==============================================================================
-  # Agent Services (8 Agents)
-  # ==============================================================================
-  # Each agent connects to LiteLLM via passthrough endpoint (agent/{name})
-  # Model assignment is managed in LiteLLM WebUI, not in agent config
-  # ==============================================================================
-  
-  # --- Steward (Orchestrator) ---
-  steward:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: steward
-    container_name: heretek-steward
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=steward
-      - AGENT_ROLE=orchestrator
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/steward
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/steward:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_steward:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8001:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Alpha (Triad) ---
-  alpha:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: alpha
-    container_name: heretek-alpha
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=alpha
-      - AGENT_ROLE=triad
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/alpha
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/alpha:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_alpha:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8002:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Beta (Triad) ---
-  beta:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: beta
-    container_name: heretek-beta
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=beta
-      - AGENT_ROLE=triad
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/beta
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/beta:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_beta:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8003:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Charlie (Triad) ---
-  charlie:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: charlie
-    container_name: heretek-charlie
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=charlie
-      - AGENT_ROLE=triad
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/charlie
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/charlie:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_charlie:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8004:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Examiner (Interrogator) ---
-  examiner:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: examiner
-    container_name: heretek-examiner
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=examiner
-      - AGENT_ROLE=interrogator
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/examiner
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/examiner:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_examiner:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8005:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Explorer (Scout) ---
-  explorer:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: explorer
-    container_name: heretek-explorer
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=explorer
-      - AGENT_ROLE=scout
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/explorer
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/explorer:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_explorer:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8006:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Sentinel (Guardian) ---
-  sentinel:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: sentinel
-    container_name: heretek-sentinel
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=sentinel
-      - AGENT_ROLE=guardian
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/sentinel
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/sentinel:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_sentinel:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8007:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Coder (Artisan) ---
-  coder:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: coder
-    container_name: heretek-coder
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=coder
-      - AGENT_ROLE=artisan
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/coder
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/coder:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_coder:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8008:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Dreamer (Visionary) ---
-  dreamer:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: dreamer
-    container_name: heretek-dreamer
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=dreamer
-      - AGENT_ROLE=visionary
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/dreamer
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/dreamer:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_dreamer:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8009:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Empath (Diplomat) ---
-  empath:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: empath
-    container_name: heretek-empath
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=empath
-      - AGENT_ROLE=diplomat
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/empath
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/empath:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_empath:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8010:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # --- Historian (Archivist) ---
-  historian:
-    build:
-      context: .
-      dockerfile: Dockerfile.agent
-      args:
-        AGENT_NAME: historian
-    container_name: heretek-historian
-    restart: unless-stopped
-    environment:
-      - AGENT_NAME=historian
-      - AGENT_ROLE=archivist
-      - LITELLM_HOST=http://litellm:4000
-      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
-      - AGENT_MODEL=agent/historian
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
-      - OTEL_ENABLED=${OTEL_ENABLED:-true}
-      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
-      - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
-      - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
-      - COLLECTIVE_ID=${COLLECTIVE_ID:-}
-      - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
-      - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
-      - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
-    volumes:
-      - ./agents/historian:/app/agent:ro
-      - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
-      - ./agents/lib:/app/lib:ro
-      - ./skills:/app/skills:ro
-      - agent_memory_historian:/app/memory
-      - collective_memory:/app/collective
-      - ./modules:/app/modules:ro
-    ports:
-      - "127.0.0.1:8011:8000"
-    depends_on:
-      litellm:
-        condition: service_started
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    networks:
-      - heretek-network
-
-  # ==============================================================================
   # Redis-to-WebSocket Bridge — Real-time A2A Message Streaming
   # ==============================================================================
   # Bridges Redis Pub/Sub messages to WebSocket for real-time UI updates
   # HTTP health check: port 3002, WebSocket: port 3003
+  # Note: This is used for dashboard real-time updates, not agent communication
   # ==============================================================================
   websocket-bridge:
     build:
@@ -873,7 +277,621 @@ services:
       - heretek-network
 
 # ==============================================================================
+# LEGACY AGENT SERVICES - DEPRECATED
+# ==============================================================================
+# The following agent services have been commented out as they are no longer
+# needed with OpenClaw Gateway v2026.3.28. All 12 agents now run as workspaces
+# within the Gateway process (port 18789), not as separate Docker containers.
+#
+# Legacy agent containers were stopped on 2026-03-31.
+# Agent workspaces are now located at: ~/.openclaw/agents/{agent}/
+#
+# To restore legacy containers (NOT RECOMMENDED):
+#   1. Uncomment all agent service definitions below
+#   2. Run: docker compose up -d steward alpha beta charlie examiner explorer sentinel coder dreamer empath historian
+#
+# Legacy Ports (NO LONGER USED):
+#   steward:    8001 (now workspace at ~/.openclaw/agents/steward)
+#   alpha:      8002 (now workspace at ~/.openclaw/agents/alpha)
+#   beta:       8003 (now workspace at ~/.openclaw/agents/beta)
+#   charlie:    8004 (now workspace at ~/.openclaw/agents/charlie)
+#   examiner:   8005 (now workspace at ~/.openclaw/agents/examiner)
+#   explorer:   8006 (now workspace at ~/.openclaw/agents/explorer)
+#   sentinel:   8007 (now workspace at ~/.openclaw/agents/sentinel)
+#   coder:      8008 (now workspace at ~/.openclaw/agents/coder)
+#   dreamer:    8009 (now workspace at ~/.openclaw/agents/dreamer)
+#   empath:     8010 (now workspace at ~/.openclaw/agents/empath)
+#   historian:  8011 (now workspace at ~/.openclaw/agents/historian)
+# ==============================================================================
+
+#   # --- Steward (Orchestrator) ---
+#   steward:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: steward
+#     container_name: heretek-steward
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=steward
+#       - AGENT_ROLE=orchestrator
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/steward
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/steward:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_steward:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8001:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Alpha (Triad) ---
+#   alpha:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: alpha
+#     container_name: heretek-alpha
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=alpha
+#       - AGENT_ROLE=triad
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/alpha
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/alpha:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_alpha:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8002:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Beta (Triad) ---
+#   beta:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: beta
+#     container_name: heretek-beta
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=beta
+#       - AGENT_ROLE=triad
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/beta
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/beta:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_beta:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8003:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Charlie (Triad) ---
+#   charlie:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: charlie
+#     container_name: heretek-charlie
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=charlie
+#       - AGENT_ROLE=triad
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/charlie
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/charlie:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_charlie:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8004:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Examiner (Interrogator) ---
+#   examiner:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: examiner
+#     container_name: heretek-examiner
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=examiner
+#       - AGENT_ROLE=interrogator
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/examiner
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/examiner:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_examiner:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8005:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Explorer (Scout) ---
+#   explorer:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: explorer
+#     container_name: heretek-explorer
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=explorer
+#       - AGENT_ROLE=scout
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/explorer
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/explorer:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_explorer:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8006:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Sentinel (Guardian) ---
+#   sentinel:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: sentinel
+#     container_name: heretek-sentinel
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=sentinel
+#       - AGENT_ROLE=guardian
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/sentinel
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/sentinel:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_sentinel:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8007:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Coder (Artisan) ---
+#   coder:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: coder
+#     container_name: heretek-coder
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=coder
+#       - AGENT_ROLE=artisan
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/coder
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/coder:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_coder:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8008:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Dreamer (Visionary) ---
+#   dreamer:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: dreamer
+#     container_name: heretek-dreamer
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=dreamer
+#       - AGENT_ROLE=visionary
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/dreamer
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/dreamer:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_dreamer:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8009:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Empath (Diplomat) ---
+#   empath:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: empath
+#     container_name: heretek-empath
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=empath
+#       - AGENT_ROLE=diplomat
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/empath
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/empath:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_empath:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8010:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+#   # --- Historian (Archivist) ---
+#   historian:
+#     build:
+#       context: .
+#       dockerfile: Dockerfile.agent
+#       args:
+#         AGENT_NAME: historian
+#     container_name: heretek-historian
+#     restart: unless-stopped
+#     environment:
+#       - AGENT_NAME=historian
+#       - AGENT_ROLE=archivist
+#       - LITELLM_HOST=http://litellm:4000
+#       - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+#       - AGENT_MODEL=agent/historian
+#       - DATABASE_URL=postgresql://${POSTGRES_USER:-heretek}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-heretek}
+#       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+#       - REDIS_HOST=redis
+#       - REDIS_PORT=6379
+#       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+#       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
+#       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
+#       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+#       - OTEL_ENABLED=${OTEL_ENABLED:-true}
+#       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-heretek-agent}
+#       - OTEL_EXPORTER_TYPE=${OTEL_EXPORTER_TYPE:-console}
+#       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://localhost:4318/v1/traces}
+#       - OTEL_LOG_LEVEL=${OTEL_LOG_LEVEL:-debug}
+#       - COLLECTIVE_ID=${COLLECTIVE_ID:-}
+#       - COLLECTIVE_NAME=${COLLECTIVE_NAME:-heretek-openclaw}
+#       - COLLECTIVE_URL=${COLLECTIVE_URL:-http://litellm:4000}
+#       - PEER_COLLECTIVES=${PEER_COLLECTIVES:-}
+#     volumes:
+#       - ./agents/historian:/app/agent:ro
+#       - ./agents/entrypoint.sh:/app/entrypoint.sh:ro
+#       - ./agents/lib:/app/lib:ro
+#       - ./skills:/app/skills:ro
+#       - agent_memory_historian:/app/memory
+#       - collective_memory:/app/collective
+#       - ./modules:/app/modules:ro
+#     ports:
+#       - "127.0.0.1:8011:8000"
+#     depends_on:
+#       litellm:
+#         condition: service_started
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#     networks:
+#       - heretek-network
+
+# ==============================================================================
 # Volumes — Persistent Data Storage
+# ==============================================================================
+# Note: Agent memory volumes are kept for backward compatibility but are no
+# longer used. Agent workspaces now use JSONL files at ~/.openclaw/agents/
 # ==============================================================================
 volumes:
   # Core services
@@ -888,7 +906,8 @@ volumes:
   collective_memory:
     driver: local
   
-  # Per-agent memory persistence
+  # Legacy per-agent memory volumes (kept for backward compatibility)
+  # These are no longer used with OpenClaw Gateway
   agent_memory_steward:
     driver: local
   agent_memory_alpha:

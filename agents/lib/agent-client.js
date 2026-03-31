@@ -4,9 +4,9 @@
  * Provides A2A communication and skill execution for OpenClaw agents.
  * 
  * Features:
- *   - A2A Protocol Gateway with Redis fallback
+ *   - OpenClaw Gateway WebSocket RPC communication
  *   - Auto-discovery of agent capabilities
- *   - 500ms timeout for A2A, automatic fallback to Redis
+ *   - JSONL session storage
  * 
  * Usage:
  *   const AgentClient = require('./lib/agent-client');
@@ -14,10 +14,11 @@
  *     agentId: 'steward',
  *     role: 'orchestrator',
  *     litellmHost: 'http://litellm:4000',
- *     apiKey: process.env.LITELLM_API_KEY
+ *     apiKey: process.env.LITELLM_API_KEY,
+ *     gatewayUrl: 'ws://127.0.0.1:18789'
  *   });
  *   
- *   // Send message to another agent (uses A2A with Redis fallback)
+ *   // Send message to another agent via Gateway
  *   await client.sendMessage('alpha', { task: 'Analyze this data' });
  *   
  *   // Execute a skill
@@ -28,282 +29,171 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-
-// Try to load Redis, but make it optional
-let Redis;
-try {
-    Redis = require('ioredis');
-} catch (e) {
-    console.warn('[agent-client] ioredis not available, Redis fallback disabled');
-}
+const WebSocket = require('ws');
 
 /**
- * A2AClient - A2A Protocol Gateway with Redis Fallback
+ * GatewayClient - OpenClaw Gateway WebSocket RPC Client
  * ==============================================================================
- * Implements the gateway pattern for A2A communication:
- *   - Primary: Try LiteLLM A2A endpoints
- *   - Fallback: Use Redis pub/sub for message delivery
- *   - Timeout: 500ms for A2A, then fall back to Redis
+ * Implements WebSocket RPC communication with OpenClaw Gateway.
+ * All A2A messages are routed through the Gateway on port 18789.
  */
-class A2AClient {
+class GatewayClient {
     /**
-     * Create a new A2AClient instance
+     * Create a new GatewayClient instance
      * @param {Object} config - Configuration options
      * @param {string} config.agentId - Agent identifier
-     * @param {string} config.litellmHost - LiteLLM gateway URL
-     * @param {string} config.apiKey - API key for LiteLLM
-     * @param {string} config.redisUrl - Redis connection URL
+     * @param {string} config.gatewayUrl - Gateway WebSocket URL (ws://127.0.0.1:18789)
      */
     constructor(config) {
         this.agentId = config.agentId || 'unknown';
-        this.litellmHost = config.litellmHost || 'http://litellm:4000';
-        this.apiKey = config.apiKey || '';
-        this.redisUrl = config.redisUrl || process.env.REDIS_URL || 'redis://redis:6379';
-        
-        // Configuration
-        this.a2aTimeout = 500; // 500ms timeout for A2A
-        this.discoveryCacheTTL = 300000; // 5 minutes cache
-        
-        // Redis clients (lazy initialized)
-        this._redis = null;
-        this._redisSub = null;
-        
-        // Agent discovery cache
-        this._discoveryCache = null;
-        this._discoveryCacheTime = 0;
-        
-        // Pending message responses (for Redis pub/sub)
-        this._pendingMessages = new Map();
+        this.gatewayUrl = config.gatewayUrl || process.env.GATEWAY_URL || 'ws://127.0.0.1:18789';
+        this.ws = null;
+        this.connected = false;
+        this.messageHandlers = new Map();
+        this.pendingResponses = new Map();
+        this.messageCounter = 0;
     }
-    
+
     /**
-     * Get Redis client (lazy initialization)
+     * Connect to the Gateway
+     * @returns {Promise<boolean>} Connection status
+     */
+    async connect() {
+        if (this.connected) {
+            return true;
+        }
+
+        return new Promise((resolve, reject) => {
+            try {
+                this.ws = new WebSocket(this.gatewayUrl);
+
+                this.ws.on('open', () => {
+                    console.log(`[GatewayClient] Connected to Gateway at ${this.gatewayUrl}`);
+                    this.connected = true;
+                    resolve(true);
+                });
+
+                this.ws.on('message', (data) => {
+                    this._handleMessage(data);
+                });
+
+                this.ws.on('error', (error) => {
+                    console.error('[GatewayClient] WebSocket error:', error.message);
+                    this.connected = false;
+                    reject(error);
+                });
+
+                this.ws.on('close', () => {
+                    console.log('[GatewayClient] Gateway connection closed');
+                    this.connected = false;
+                });
+
+                // Connection timeout
+                setTimeout(() => {
+                    if (!this.connected) {
+                        reject(new Error('Gateway connection timeout'));
+                    }
+                }, 10000);
+
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    /**
+     * Handle incoming WebSocket messages
      * @private
      */
-    _getRedis() {
-        if (!Redis) return null;
-        if (!this._redis) {
-            this._redis = new Redis(this.redisUrl, {
-                maxRetriesPerRequest: 3,
-                retryStrategy: (times) => Math.min(times * 50, 2000)
-            });
-            this._redis.on('error', (err) => {
-                console.error('[A2AClient] Redis error:', err.message);
-            });
+    _handleMessage(data) {
+        try {
+            const message = JSON.parse(data.toString());
+
+            // Check if this is a response to a pending request
+            if (message.correlationId && this.pendingResponses.has(message.correlationId)) {
+                const { resolve, reject, timeout } = this.pendingResponses.get(message.correlationId);
+                clearTimeout(timeout);
+                this.pendingResponses.delete(message.correlationId);
+
+                if (message.error) {
+                    reject(new Error(message.error));
+                } else {
+                    resolve(message);
+                }
+            }
+
+            // Call registered message handlers
+            const handlers = this.messageHandlers.get(message.type) || [];
+            handlers.forEach(handler => handler(message));
+
+        } catch (error) {
+            console.error('[GatewayClient] Failed to parse message:', error);
         }
-        return this._redis;
     }
-    
+
     /**
-     * Get Redis subscriber client (lazy initialization)
-     * @private
-     */
-    _getRedisSub() {
-        if (!Redis) return null;
-        if (!this._redisSub) {
-            this._redisSub = new Redis(this.redisUrl, {
-                maxRetriesPerRequest: 3,
-                retryStrategy: (times) => Math.min(times * 50, 2000)
-            });
-        }
-        return this._redisSub;
-    }
-    
-    /**
-     * Send message via A2A with timeout and Redis fallback
+     * Send a message via Gateway WebSocket RPC
      * @param {string} toAgent - Target agent identifier
      * @param {Object} message - Message content
      * @param {Object} options - Additional options
-     * @returns {Promise<Object>} Response from A2A or Redis
+     * @returns {Promise<Object>} Response from Gateway
      */
     async sendMessage(toAgent, message, options = {}) {
-        const msgId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        if (!this.connected) {
+            await this.connect();
+        }
+
+        const correlationId = `msg_${Date.now()}_${++this.messageCounter}`;
         
         const messagePayload = {
-            id: msgId,
+            type: 'message',
+            agent: toAgent,
+            correlationId: correlationId,
+            content: {
+                role: 'user',
+                content: typeof message === 'string' ? message : JSON.stringify(message)
+            },
             from: this.agentId,
-            to: toAgent,
-            type: options.type || 'task',
-            content: typeof message === 'string' ? message : JSON.stringify(message),
-            timestamp: new Date().toISOString(),
-            replyTo: options.replyTo || null
+            timestamp: new Date().toISOString()
         };
-        
-        // Try A2A first with timeout
-        const a2aResult = await this._tryA2A(toAgent, messagePayload);
-        if (a2aResult.success) {
-            return a2aResult.response;
-        }
-        
-        // Fall back to Redis
-        console.log(`[A2AClient] A2A failed for ${toAgent}, falling back to Redis`);
-        const redisResult = await this._tryRedis(toAgent, messagePayload);
-        if (redisResult.success) {
-            return redisResult.response;
-        }
-        
-        // Both failed
-        throw new Error(`Failed to send message to ${toAgent}: A2A and Redis both failed`);
+
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                this.pendingResponses.delete(correlationId);
+                reject(new Error('Gateway response timeout'));
+            }, options.timeout || 30000);
+
+            this.pendingResponses.set(correlationId, { resolve, reject, timeout });
+
+            this.ws.send(JSON.stringify(messagePayload));
+        });
     }
-    
-    /**
-     * Try sending via A2A protocol with timeout
-     * @private
-     */
-    async _tryA2A(toAgent, message) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), this.a2aTimeout);
-        
-        try {
-            const response = await fetch(`${this.litellmHost}/v1/agents/${toAgent}/send`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(message),
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (!response.ok) {
-                return { success: false, error: `HTTP ${response.status}` };
-            }
-            
-            const data = await response.json();
-            return { success: true, response: data };
-        } catch (error) {
-            clearTimeout(timeoutId);
-            return { success: false, error: error.message };
-        }
-    }
-    
-    /**
-     * Try sending via Redis pub/sub
-     * @private
-     */
-    async _tryRedis(toAgent, message) {
-        const redis = this._getRedis();
-        if (!redis) {
-            return { success: false, error: 'Redis not available' };
-        }
-        
-        try {
-            // Create a promise that resolves when we get a response
-            const responsePromise = new Promise((resolve, reject) => {
-                const timeout = setTimeout(() => {
-                    resolve({ success: true, response: { status: 'queued', messageId: message.id } });
-                }, 5000);
-                
-                this._pendingMessages.set(message.id, { resolve, reject, timeout });
-            });
-            
-            // Publish message to agent's channel
-            const channel = `a2a:${toAgent}`;
-            await redis.publish(channel, JSON.stringify(message));
-            
-            // Wait for response (or timeout)
-            const result = await responsePromise;
-            return result;
-        } catch (error) {
-            return { success: false, error: error.message };
-        }
-    }
-    
-    /**
-     * Discover available agents via A2A endpoint
-     * @returns {Promise<Array>} Array of available agents
-     */
-    async discoverAgents() {
-        // Check cache
-        if (this._discoveryCache && (Date.now() - this._discoveryCacheTime < this.discoveryCacheTTL)) {
-            return this._discoveryCache;
-        }
-        
-        // Try A2A discovery endpoint
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), this.a2aTimeout);
-            
-            const response = await fetch(`${this.litellmHost}/v1/agents`, {
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-            
-            if (response.ok) {
-                const data = await response.json();
-                this._discoveryCache = data.agents || [];
-                this._discoveryCacheTime = Date.now();
-                return this._discoveryCache;
-            }
-        } catch (error) {
-            console.log(`[A2AClient] Discovery failed: ${error.message}`);
-        }
-        
-        // Fall back to local agent registry
-        return this._getLocalAgents();
-    }
-    
-    /**
-     * Get local agent registry as fallback
-     * @private
-     */
-    _getLocalAgents() {
-        // Return known agents from the collective
-        return [
-            { agentId: 'steward', role: 'orchestrator', capabilities: ['coordinate', 'delegate'] },
-            { agentId: 'alpha', role: 'triad', capabilities: ['deliberate', 'vote'] },
-            { agentId: 'beta', role: 'triad', capabilities: ['deliberate', 'vote'] },
-            { agentId: 'gamma', role: 'triad', capabilities: ['deliberate', 'vote'] },
-            { agentId: 'sentinel', role: 'guardian', capabilities: ['protect', 'monitor'] },
-            { agentId: 'scout', role: 'scout', capabilities: ['explore', 'discover'] }
-        ];
-    }
-    
+
     /**
      * Subscribe to messages for this agent
      * @param {Function} handler - Message handler function
      */
-    async subscribeToMessages(handler) {
-        const redisSub = this._getRedisSub();
-        if (!redisSub) {
-            console.warn('[A2AClient] Cannot subscribe: Redis not available');
-            return;
-        }
-        
-        const channel = `a2a:${this.agentId}`;
-        await redisSub.subscribe(channel);
-        
-        redisSub.on('message', (ch, message) => {
-            if (ch === channel) {
-                try {
-                    const msg = JSON.parse(message);
-                    handler(msg);
-                } catch (error) {
-                    console.error('[A2AClient] Failed to parse message:', error);
-                }
-            }
-        });
+    subscribeToMessages(handler) {
+        this.messageHandlers.set('message', [...(this.messageHandlers.get('message') || []), handler]);
     }
-    
+
     /**
-     * Clean up resources
+     * Disconnect from Gateway
      */
     async disconnect() {
-        if (this._redis) {
-            await this._redis.quit();
-            this._redis = null;
+        if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+            this.connected = false;
         }
-        if (this._redisSub) {
-            await this._redisSub.quit();
-            this._redisSub = null;
-        }
+    }
+
+    /**
+     * Get Gateway connection status
+     * @returns {boolean} Connection status
+     */
+    isConnected() {
+        return this.connected;
     }
 }
 
@@ -311,7 +201,7 @@ class A2AClient {
  * AgentClient - Main Agent Client Class
  * ==============================================================================
  * Provides A2A communication and skill execution for OpenClaw agents.
- * Now uses A2AClient internally for gateway pattern with Redis fallback.
+ * Uses OpenClaw Gateway WebSocket RPC for all A2A communication.
  */
 class AgentClient {
     /**
@@ -321,6 +211,7 @@ class AgentClient {
      * @param {string} config.role - Agent role (orchestrator, triad, etc.)
      * @param {string} config.litellmHost - LiteLLM gateway URL
      * @param {string} config.apiKey - API key for LiteLLM
+     * @param {string} config.gatewayUrl - OpenClaw Gateway WebSocket URL
      * @param {string} [config.skillsPath] - Path to skills directory
      * @param {string} [config.model] - Model to use (defaults to agent/{agentId})
      */
@@ -329,22 +220,21 @@ class AgentClient {
         this.role = config.role || process.env.AGENT_ROLE || 'general';
         this.litellmHost = config.litellmHost || process.env.LITELLM_HOST || 'http://litellm:4000';
         this.apiKey = config.apiKey || process.env.LITELLM_API_KEY || '';
+        this.gatewayUrl = config.gatewayUrl || process.env.GATEWAY_URL || 'ws://127.0.0.1:18789';
         this.skillsPath = config.skillsPath || process.env.SKILLS_PATH || '/app/skills';
         this.model = config.model || process.env.AGENT_MODEL || `agent/${this.agentId}`;
-        
+
         // State directories
         this.stateDir = '/app/state';
         this.memoryDir = '/app/memory';
         this.collectiveDir = '/app/collective';
-        
-        // Initialize A2A Client for gateway pattern with Redis fallback
-        this.a2aClient = new A2AClient({
+
+        // Initialize Gateway Client
+        this.gatewayClient = new GatewayClient({
             agentId: this.agentId,
-            litellmHost: this.litellmHost,
-            apiKey: this.apiKey,
-            redisUrl: process.env.REDIS_URL || 'redis://redis:6379'
+            gatewayUrl: this.gatewayUrl
         });
-        
+
         // Ensure directories exist
         [this.stateDir, this.memoryDir, this.collectiveDir].forEach(dir => {
             if (!fs.existsSync(dir)) {
@@ -354,12 +244,11 @@ class AgentClient {
     }
 
     /**
-     * Send an A2A message to another agent (with gateway pattern)
-     * Uses A2A protocol first, falls back to Redis on failure
+     * Send an A2A message to another agent via Gateway
      * @param {string} toAgent - Target agent identifier
      * @param {Object|string} content - Message content
      * @param {string} [type='task'] - Message type (task, query, broadcast, response)
-     * @returns {Promise<Object>} Response from A2A or Redis
+     * @returns {Promise<Object>} Response from Gateway
      */
     async sendMessage(toAgent, content, type = 'task') {
         const message = {
@@ -369,42 +258,23 @@ class AgentClient {
             timestamp: new Date().toISOString()
         };
 
-        // Try A2A first with timeout, fallback to Redis
         try {
-            const response = await this.a2aClient.sendMessage(toAgent, message, { type });
+            const response = await this.gatewayClient.sendMessage(toAgent, message, { type });
             
             // Log outgoing message
             this._logMessage({ ...message, to: toAgent, direction: 'outgoing' });
             
             return response;
         } catch (error) {
-            // A2A and Redis both failed - use legacy direct approach as last resort
-            console.warn(`[AgentClient] Gateway failed: ${error.message}, trying direct A2A`);
-            
-            const response = await fetch(`${this.litellmHost}/v1/agents/${toAgent}/send`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(message)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Failed to send message: ${response.statusText}`);
-            }
-
-            // Log outgoing message
-            this._logMessage({ ...message, to: toAgent, direction: 'outgoing' });
-            
-            return response.json();
+            console.error(`[AgentClient] Gateway message failed: ${error.message}`);
+            throw error;
         }
     }
 
     /**
      * Broadcast a message to all agents
      * @param {Object|string} content - Message content
-     * @returns {Promise<Object>} Response from LiteLLM
+     * @returns {Promise<Object>} Response from Gateway
      */
     async broadcast(content) {
         return this.sendMessage('broadcast', content, 'broadcast');
@@ -415,7 +285,7 @@ class AgentClient {
      * @param {string} toAgent - Target agent identifier
      * @param {Object|string} content - Response content
      * @param {string} inReplyTo - Original message ID
-     * @returns {Promise<Object>} Response from LiteLLM
+     * @returns {Promise<Object>} Response from Gateway
      */
     async sendResponse(toAgent, content, inReplyTo) {
         const message = {
@@ -426,91 +296,41 @@ class AgentClient {
             timestamp: new Date().toISOString()
         };
 
-        const response = await fetch(`${this.litellmHost}/v1/agents/${toAgent}/send`, {
+        return this.gatewayClient.sendMessage(toAgent, message);
+    }
+
+    /**
+     * Make a chat completion request through LiteLLM
+     * @param {string} prompt - User prompt
+     * @param {Object} options - Additional options
+     * @returns {Promise<string>} Model response
+     */
+    async chat(prompt, options = {}) {
+        const messages = options.messages || [
+            { role: 'system', content: this._getSystemPrompt() },
+            { role: 'user', content: prompt }
+        ];
+
+        const response = await fetch(`${this.litellmHost}/v1/chat/completions`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${this.apiKey}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(message)
-        });
-
-        return response.json();
-    }
-
-    /**
-     * Poll for pending messages
-     * @returns {Promise<Array>} Array of pending messages
-     */
-    async pollMessages() {
-        const response = await fetch(`${this.litellmHost}/v1/agents/${this.agentId}/messages`, {
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            }
+            body: JSON.stringify({
+                model: this.model,
+                messages: messages,
+                agent: this.agentId,
+                ...options
+            })
         });
 
         if (!response.ok) {
-            return [];
+            throw new Error(`Chat request failed: ${response.statusText}`);
         }
 
         const data = await response.json();
-        return data.messages || [];
-    }
-
-    /**
-     * Send a heartbeat signal
-     * @param {string} [status='alive'] - Agent status
-     * @returns {Promise<Object>} Response from LiteLLM
-     */
-    async sendHeartbeat(status = 'alive') {
-        const response = await fetch(`${this.litellmHost}/v1/agents/${this.agentId}/heartbeat`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                status: status,
-                timestamp: new Date().toISOString(),
-                agent: this.agentId,
-                role: this.role,
-                model: this.model
-            })
-        });
-
-        return response.json();
-    }
-
-    /**
-     * Register agent with LiteLLM A2A
-     * @returns {Promise<Object>} Response from LiteLLM
-     */
-    async register() {
-        const response = await fetch(`${this.litellmHost}/v1/agents/register`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                agent_id: this.agentId,
-                role: this.role,
-                model: this.model,
-                capabilities: this._getCapabilities()
-            })
-        });
-
-        return response.json();
-    }
-
-    /**
-     * Discover available agents via A2A endpoint with caching
-     * Uses auto-discovery with 5-minute cache, falls back to local registry
-     * @returns {Promise<Array>} Array of available agents
-     */
-    async discoverAgents() {
-        return this.a2aClient.discoverAgents();
+        return data.choices?.[0]?.message?.content || '';
     }
 
     /**
@@ -592,7 +412,7 @@ class AgentClient {
      * @private
      */
     async _executeNodeSkill(skillPath, context, env) {
-        // For Node.js skills, we require and execute them
+        // For Node.js skills: we require and execute them
         const skill = require(skillPath);
         
         if (typeof skill.execute === 'function') {
@@ -626,41 +446,7 @@ class AgentClient {
     }
 
     /**
-     * Make a chat completion request through LiteLLM
-     * @param {string} prompt - User prompt
-     * @param {Object} options - Additional options
-     * @returns {Promise<string>} Model response
-     */
-    async chat(prompt, options = {}) {
-        const messages = options.messages || [
-            { role: 'system', content: this._getSystemPrompt() },
-            { role: 'user', content: prompt }
-        ];
-
-        const response = await fetch(`${this.litellmHost}/v1/chat/completions`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages: messages,
-                agent: this.agentId,
-                ...options
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`Chat request failed: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return data.choices?.[0]?.message?.content || '';
-    }
-
-    /**
-     * Store data in agent memory
+     * Store data in agent memory (JSONL format)
      * @param {string} key - Memory key
      * @param {Object} value - Value to store
      */
@@ -685,7 +471,7 @@ class AgentClient {
     }
 
     /**
-     * Store data in collective memory
+     * Store data in collective memory (JSONL format)
      * @param {string} key - Memory key
      * @param {Object} value - Value to store
      */
@@ -743,13 +529,11 @@ class AgentClient {
 Your role is: ${this.role}
 Your capabilities: ${this._getCapabilities().join(', ')}
 
-You communicate with other agents through the A2A protocol and can execute skills from the skills repository.
-
-Always be helpful, accurate, and collaborative with other agents in the collective.`;
+You communicate with other agents through the OpenClaw Gateway WebSocket RPC protocol and can execute skills from the skills repository.`;
     }
 
     /**
-     * Log a message to the message log
+     * Log a message to the message log (JSONL format)
      * @private
      */
     _logMessage(message) {
@@ -758,7 +542,7 @@ Always be helpful, accurate, and collaborative with other agents in the collecti
     }
 
     /**
-     * Log a skill execution
+     * Log a skill execution (JSONL format)
      * @private
      */
     _logSkillExecution(skillName, context, result) {
@@ -770,11 +554,34 @@ Always be helpful, accurate, and collaborative with other agents in the collecti
             timestamp: new Date().toISOString()
         }) + '\n');
     }
+
+    /**
+     * Connect to Gateway
+     * @returns {Promise<boolean>} Connection status
+     */
+    async connect() {
+        return this.gatewayClient.connect();
+    }
+
+    /**
+     * Disconnect from Gateway
+     */
+    async disconnect() {
+        return this.gatewayClient.disconnect();
+    }
+
+    /**
+     * Get Gateway connection status
+     * @returns {boolean} Connection status
+     */
+    isConnected() {
+        return this.gatewayClient.isConnected();
+    }
 }
 
 // Export for CommonJS
 module.exports = AgentClient;
-module.exports.A2AClient = A2AClient;
+module.exports.GatewayClient = GatewayClient;
 
 // Also support ES modules default export
 module.exports.default = AgentClient;

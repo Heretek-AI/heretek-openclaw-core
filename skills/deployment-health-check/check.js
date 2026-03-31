@@ -2,11 +2,18 @@
 
 /**
  * Deployment Health Check
- * Checks the health status of all infrastructure services and agents
+ * Checks the health status of all infrastructure services and agent workspaces
  * in The Collective deployment.
+ * 
+ * Updated for OpenClaw Gateway Architecture v2.1
+ * - Agents run as workspaces within Gateway (port 18789)
+ * - No longer checks individual container ports 8001-8011
  */
 
 const TIMEOUT_MS = 5000;
+const { execSync } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 // Service configurations
 const SERVICES = {
@@ -31,23 +38,32 @@ const SERVICES = {
     name: 'Ollama LLM',
     url: 'http://localhost:11434/api/tags',
     port: 11434
+  },
+  openclaw_gateway: {
+    name: 'OpenClaw Gateway',
+    port: 18789,
+    tcp: true,
+    check: 'gateway'
   }
 };
 
-// Agent configurations (ports 8001-8011)
-const AGENTS = {
-  steward: { name: 'Steward', port: 8001 },
-  alpha: { name: 'Alpha', port: 8002 },
-  beta: { name: 'Beta', port: 8003 },
-  charlie: { name: 'Charlie', port: 8004 },
-  coder: { name: 'Coder', port: 8005 },
-  dreamer: { name: 'Dreamer', port: 8006 },
-  empath: { name: 'Empath', port: 8007 },
-  examiner: { name: 'Examiner', port: 8008 },
-  explorer: { name: 'Explorer', port: 8009 },
-  historian: { name: 'Historian', port: 8010 },
-  sentinel: { name: 'Sentinel', port: 8011 }
-};
+// Agent workspaces (not containers)
+const AGENT_WORKSPACES = [
+  'main',
+  'steward',
+  'alpha',
+  'beta',
+  'charlie',
+  'examiner',
+  'explorer',
+  'sentinel',
+  'coder',
+  'dreamer',
+  'empath',
+  'historian'
+];
+
+const WORKSPACE_BASE = path.join(process.env.HOME || '/root', '.openclaw', 'agents');
 
 /**
  * Check HTTP service health
@@ -132,15 +148,105 @@ async function checkTcpPort(name, port, timeout = TIMEOUT_MS) {
 }
 
 /**
- * Check agent health endpoint
+ * Check OpenClaw Gateway status using CLI
  */
-async function checkAgent(agentKey, config) {
-  const url = `http://localhost:${config.port}/health`;
-  const result = await checkHttpService(config.name, url);
-  return {
-    ...result,
-    port: config.port
+async function checkGatewayStatus() {
+  const startTime = Date.now();
+  
+  try {
+    // Try to run openclaw gateway status command
+    execSync('openclaw gateway status', { 
+      stdio: 'pipe',
+      timeout: TIMEOUT_MS
+    });
+    
+    const responseTime = Date.now() - startTime;
+    return {
+      status: 'healthy',
+      responseTime,
+      gatewayStatus: 'running'
+    };
+  } catch (error) {
+    const responseTime = Date.now() - startTime;
+    
+    // Gateway CLI not available, try TCP check
+    const tcpResult = await checkTcpPort('OpenClaw Gateway', 18789, TIMEOUT_MS);
+    
+    if (tcpResult.status === 'healthy') {
+      return {
+        status: 'healthy',
+        responseTime: tcpResult.responseTime,
+        gatewayStatus: 'running (CLI not available)'
+      };
+    }
+    
+    return {
+      status: 'unhealthy',
+      responseTime,
+      error: error.message
+    };
+  }
+}
+
+/**
+ * Check agent workspace health
+ */
+async function checkAgentWorkspace(agentName) {
+  const workspacePath = path.join(WORKSPACE_BASE, agentName);
+  const startTime = Date.now();
+  
+  const result = {
+    workspace: workspacePath,
+    status: 'unknown'
   };
+  
+  try {
+    // Check if workspace directory exists
+    if (!fs.existsSync(workspacePath)) {
+      result.status = 'missing';
+      result.error = 'Workspace directory not found';
+      result.responseTime = Date.now() - startTime;
+      return result;
+    }
+    
+    // Check for required workspace files
+    const requiredFiles = ['config.json', 'state.json'];
+    const missingFiles = [];
+    
+    for (const file of requiredFiles) {
+      if (!fs.existsSync(path.join(workspacePath, file))) {
+        missingFiles.push(file);
+      }
+    }
+    
+    if (missingFiles.length > 0) {
+      result.status = 'incomplete';
+      result.missingFiles = missingFiles;
+      result.responseTime = Date.now() - startTime;
+      return result;
+    }
+    
+    // Try to parse config.json to verify it's valid
+    try {
+      const configContent = fs.readFileSync(path.join(workspacePath, 'config.json'), 'utf8');
+      JSON.parse(configContent);
+    } catch (error) {
+      result.status = 'corrupted';
+      result.error = `Invalid config.json: ${error.message}`;
+      result.responseTime = Date.now() - startTime;
+      return result;
+    }
+    
+    result.status = 'healthy';
+    result.responseTime = Date.now() - startTime;
+    return result;
+    
+  } catch (error) {
+    result.status = 'error';
+    result.error = error.message;
+    result.responseTime = Date.now() - startTime;
+    return result;
+  }
 }
 
 /**
@@ -163,11 +269,15 @@ async function runHealthCheck() {
   // Check infrastructure services
   for (const [key, config] of Object.entries(SERVICES)) {
     let result;
-    if (config.tcp) {
+    
+    if (config.check === 'gateway') {
+      result = await checkGatewayStatus();
+    } else if (config.tcp) {
       result = await checkTcpPort(config.name, config.port);
     } else {
       result = await checkHttpService(config.name, config.url);
     }
+    
     results.services[key] = result;
     results.summary.total++;
     
@@ -179,10 +289,10 @@ async function runHealthCheck() {
     }
   }
 
-  // Check agents
-  for (const [key, config] of Object.entries(AGENTS)) {
-    const result = await checkAgent(key, config);
-    results.agents[key] = result;
+  // Check agent workspaces
+  for (const agentName of AGENT_WORKSPACES) {
+    const result = await checkAgentWorkspace(agentName);
+    results.agents[agentName] = result;
     results.summary.total++;
     
     if (result.status === 'healthy') {
