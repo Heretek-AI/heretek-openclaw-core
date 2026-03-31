@@ -13,6 +13,82 @@
       "passthrough_endpoints": true
     }
   },
+  "models": {
+    "providers": {
+      "litellm": {
+        "enabled": true,
+        "base_url": "http://localhost:4000",
+        "models": [
+          {
+            "name": "agent/steward",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Steward Agent - Orchestrator role"
+          },
+          {
+            "name": "agent/alpha",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Alpha Agent - Triad role"
+          },
+          {
+            "name": "agent/beta",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Beta Agent - Triad role"
+          },
+          {
+            "name": "agent/charlie",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Charlie Agent - Triad role"
+          },
+          {
+            "name": "agent/examiner",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Examiner Agent - Interrogator role"
+          },
+          {
+            "name": "agent/explorer",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Explorer Agent - Scout role"
+          },
+          {
+            "name": "agent/sentinel",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Sentinel Agent - Guardian role"
+          },
+          {
+            "name": "agent/coder",
+            "provider": "zai",
+            "model": "GLM-4",
+            "description": "Coder Agent - Artisan role (GLM-4 via z.ai passthrough)"
+          },
+          {
+            "name": "agent/dreamer",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Dreamer Agent - Visionary role"
+          },
+          {
+            "name": "agent/empath",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Empath Agent - Diplomat role"
+          },
+          {
+            "name": "agent/historian",
+            "provider": "minimax",
+            "model": "MiniMax abab6.5s-chat",
+            "description": "Historian Agent - Archivist role"
+          }
+        ]
+      }
+    }
+  },
   "agents": [
     {
       "id": "steward",

@@ -156,11 +156,11 @@ model_list:
   # Coder (Artisan) - Code generation and review
   - model_name: agent/coder
     litellm_params:
-      model: minimax/MiniMax-M2.7
-      api_key: os.environ/MINIMAX_API_KEY
-      api_base: os.environ/MINIMAX_API_BASE
+      model: zai/glm-4
+      api_key: os.environ/ZAI_API_KEY
+      api_base: os.environ/ZAI_API_BASE
     model_info:
-      description: "Coder Agent - Artisan role"
+      description: "Coder Agent - Artisan role (GLM-4 via z.ai passthrough)"
       agent_role: artisan
       agent_id: coder
 
