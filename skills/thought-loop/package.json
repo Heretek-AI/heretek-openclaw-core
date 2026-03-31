@@ -1,0 +1,26 @@
+{
+  "name": "openclaw-thought-loop",
+  "version": "1.0.0",
+  "description": "Structured thought generation from environmental deltas for OpenClaw agent collective",
+  "main": "thought-loop.js",
+  "scripts": {
+    "test": "node thought-loop.js run --json",
+    "detect": "node thought-loop.js detect",
+    "generate": "node thought-loop.js generate",
+    "idle": "node thought-loop.js idle",
+    "run": "node thought-loop.js run"
+  },
+  "keywords": [
+    "openclaw",
+    "heretek",
+    "thought-loop",
+    "agent",
+    "consciousness",
+    "autonomous"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

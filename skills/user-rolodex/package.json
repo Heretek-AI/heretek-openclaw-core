@@ -1,0 +1,26 @@
+{
+  "name": "openclaw-user-rolodex",
+  "version": "1.0.0",
+  "description": "Multi-platform user identity resolution and preference learning for OpenClaw",
+  "main": "user-rolodex.js",
+  "scripts": {
+    "test": "node user-rolodex.js list --json",
+    "create": "node user-rolodex.js create",
+    "lookup": "node user-rolodex.js lookup",
+    "search": "node user-rolodex.js search",
+    "list": "node user-rolodex.js list"
+  },
+  "keywords": [
+    "openclaw",
+    "heretek",
+    "user-management",
+    "identity-resolution",
+    "preferences",
+    "agent"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

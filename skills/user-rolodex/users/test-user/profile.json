@@ -1,0 +1,63 @@
+{
+  "uuid": "8474425b-017e-bf31-2563-1ca3ecc157c9",
+  "slug": "test-user",
+  "username": "test-user",
+  "name": {
+    "full": "Test User",
+    "preferred": "Test User",
+    "phonetic": null
+  },
+  "pronouns": null,
+  "timezone": "UTC",
+  "languages": [
+    "en"
+  ],
+  "platforms": {
+    "discord": {
+      "id": null,
+      "username": null,
+      "discriminator": null,
+      "nickname": null
+    },
+    "phone": {
+      "number": null,
+      "verified": false
+    },
+    "web": {
+      "email": null,
+      "sessions": []
+    },
+    "github": {
+      "id": null,
+      "username": null
+    },
+    "slack": {
+      "id": null,
+      "team_id": null,
+      "username": null
+    }
+  },
+  "preferences": {
+    "communicationStyle": "adaptive",
+    "response_length": "adaptive",
+    "preferredAgents": [],
+    "code_style": {
+      "comments": "standard",
+      "naming": "descriptive",
+      "formatting": null
+    },
+    "topics_of_interest": []
+  },
+  "createdAt": "2026-03-31T00:43:01.572Z",
+  "created": "2026-03-31T00:43:01.572Z",
+  "lastActive": "2026-03-31T00:43:01.572Z",
+  "last_interaction": "2026-03-31T00:43:01.572Z",
+  "relationship": {
+    "type": "primary",
+    "since": "2026-03-31T00:43:01.572Z",
+    "trust_level": 0.8
+  },
+  "projects": [],
+  "context_notes": [],
+  "sessions": []
+}

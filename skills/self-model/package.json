@@ -1,0 +1,26 @@
+{
+  "name": "openclaw-self-model",
+  "version": "1.0.0",
+  "description": "Meta-cognitive self-awareness for OpenClaw agent collective",
+  "main": "self-model.js",
+  "scripts": {
+    "test": "node self-model.js --json",
+    "summary": "node self-model.js --summary",
+    "capabilities": "node self-model.js --capabilities",
+    "confidence": "node self-model.js --confidence",
+    "state": "node self-model.js --state"
+  },
+  "keywords": [
+    "openclaw",
+    "heretek",
+    "self-model",
+    "metacognition",
+    "agent",
+    "consciousness"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "goalPool": [
+    {
+      "id": "goal-c4dc77a76c5d6acc",
+      "title": "Test goal",
+      "description": "",
+      "source": "system",
+      "priority": 5,
+      "estimatedEffort": 5,
+      "expectedValue": 5,
+      "inviolableCheck": true,
+      "prerequisites": [],
+      "resources": [],
+      "submitter": "steward",
+      "submittedAt": 1774917781357,
+      "activatedAt": null,
+      "completedAt": null,
+      "status": "pending_evaluation",
+      "evaluation": null,
+      "outcome": null
+    }
+  ],
+  "activeGoals": [],
+  "goalHistory": [],
+  "lastReconsideration": 1774917781357,
+  "metrics": {
+    "goals_registered_total": 1,
+    "goals_completed_total": 0,
+    "goals_failed_total": 0,
+    "avg_completion_time_ms": 0,
+    "consensus_approval_rate": 0,
+    "inviolable_rejections": 0
+  },
+  "savedAt": 1774917781357
+}

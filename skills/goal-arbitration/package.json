@@ -1,0 +1,27 @@
+{
+  "name": "openclaw-goal-arbitration",
+  "version": "1.0.0",
+  "description": "Multi-source goal registration and prioritization for OpenClaw agent collective",
+  "main": "goal-arbitration.js",
+  "scripts": {
+    "test": "node goal-arbitration.js status --json",
+    "register": "node goal-arbitration.js register",
+    "evaluate": "node goal-arbitration.js evaluate",
+    "prioritize": "node goal-arbitration.js prioritize",
+    "activate": "node goal-arbitration.js activate",
+    "status": "node goal-arbitration.js status"
+  },
+  "keywords": [
+    "openclaw",
+    "heretek",
+    "goal-arbitration",
+    "goal-management",
+    "agent",
+    "prioritization"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
