@@ -156,7 +156,7 @@ model_list:
   # Coder (Artisan) - Code generation and review
   - model_name: agent/coder
     litellm_params:
-      model: zai/glm-4
+      model: zai/glm-5-1
       api_key: os.environ/ZAI_API_KEY
       api_base: os.environ/ZAI_API_BASE
     model_info:
