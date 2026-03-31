@@ -4,8 +4,51 @@ _Environment-specific configuration for the Explorer agent._
 
 ## A2A Communication
 
-- **Gateway:** `http://localhost:4000`
-- **Agent Endpoints:** `/v1/agents/{agent_name}/send`
+### Gateway WebSocket RPC
+
+- **Gateway Endpoint:** `ws://127.0.0.1:18789`
+- **WebSocket Subprotocol:** `a2a-v1`
+- **Message Format:** A2A Protocol v1.0.0
+
+### Connection Example
+
+```javascript
+const WebSocket = require('ws');
+
+const ws = new WebSocket('ws://127.0.0.1:18789', ['a2a-v1']);
+
+ws.on('open', () => {
+  // Send handshake
+  ws.send(JSON.stringify({
+    type: 'handshake',
+    content: {
+      action: 'advertise',
+      capabilities: {
+        supportedMessageTypes: ['message', 'status', 'error', 'request', 'response'],
+        version: '1.0.0'
+      }
+    }
+  }));
+});
+```
+
+### Message Types Used
+
+| Type | Code | Purpose |
+|------|------|---------|
+| `message` | 0x01 | Send/receive agent messages |
+| `status` | 0x02 | Broadcast status updates |
+| `request` | 0x33 | Request data from other agents |
+| `response` | 0x34 | Respond to data requests |
+| `broadcast` | 0x35 | Share discoveries with collective |
+
+### LiteLLM Integration (Model Routing Only)
+
+- **LiteLLM Gateway:** `http://localhost:4000`
+- **Agent Passthrough Endpoint:** `/v1/agents/explorer/send`
+- **Health Check:** `/health`
+
+**Note:** LiteLLM is used for model routing only, NOT for A2A communication.
 
 ## Monitoring Sources
 
@@ -17,7 +60,7 @@ _Environment-specific configuration for the Explorer agent._
 
 ## Browser Access Integration
 
-The Explorer agent now has browser automation capabilities via the [`browser-access`](../../skills/browser-access/SKILL.md) skill:
+The Explorer agent has browser automation capabilities via the [`browser-access`](../../skills/browser-access/SKILL.md) skill:
 
 ### Capabilities
 
