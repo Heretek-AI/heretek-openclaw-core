@@ -7,8 +7,22 @@
 # - Message polling and processing
 # - Skill execution
 # - Heartbeat signals
-# - Integration with autonomy modules (thought-loop, self-model)
 #
+# DEPRECATED: This entrypoint script is legacy from the container-based architecture.
+# With OpenClaw Gateway v2026.3.28+, agents run as workspaces within the Gateway
+# process (port 18789), not as separate Docker containers.
+#
+# This script is retained for backward compatibility only. New deployments should
+# use the Gateway architecture. See docs/ARCHITECTURE.md for details.
+#
+# DELETED MODULES (v2.0.3):
+# - thought-loop: Removed during codebase consolidation
+# - self-model: Removed during codebase consolidation
+# - observability/langfuse-client.js: Replaced by Gateway-level observability
+# - observability/opentelemetry.js: Replaced by Gateway-level tracing
+# - collective/registry.js: Replaced by Gateway multi-collective support
+# ==============================================================================
+
 # Environment Variables:
 #   AGENT_NAME         - Agent identifier (steward, alpha, beta, etc.)
 #   AGENT_ROLE         - Agent role (orchestrator, triad, etc.)
@@ -311,34 +325,12 @@ store_message() {
     echo "$message" >> "$MEMORY_DIR/messages.jsonl"
 }
 
-# Run autonomy modules (thought-loop, self-model)
+# Run autonomy modules (DEPRECATED - Modules removed in v2.0.3)
 run_autonomy_modules() {
-    log "INFO" "Running autonomy modules..."
-    
-    # Thought loop - if available (run in background as daemon)
-    if [ -f "/app/modules/thought-loop/thought-loop.sh" ]; then
-        log "INFO" "Starting thought-loop module in background"
-        ( /app/modules/thought-loop/thought-loop.sh --daemon ) > /tmp/thought-loop.out 2>&1 &
-        local thought_pid=$!
-        log "INFO" "Thought-loop started with PID $thought_pid"
-        sleep 1
-        if ! kill -0 $thought_pid 2>/dev/null; then
-            log "WARN" "Thought-loop exited immediately, check /tmp/thought-loop.out"
-        fi
-    else
-        log "INFO" "Thought-loop module not found, skipping"
-    fi
-    
-    # Self-model - if available (run in background, but it's CLI so just init)
-    if [ -f "/app/modules/self-model/self-model.js" ]; then
-        log "INFO" "Initializing self-model module"
-        node /app/modules/self-model/self-model.js --summary > /tmp/self-model.out 2>&1 || true
-        log "INFO" "Self-model initialized"
-    else
-        log "INFO" "Self-model module not found, skipping"
-    fi
-    
-    log "INFO" "Autonomy modules startup complete"
+  log "INFO" "Autonomy modules (thought-loop, self-model) were removed in v2.0.3"
+  log "INFO" "These features are now handled by the OpenClaw Gateway"
+  log "INFO" "Skipping autonomy modules"
+  return 0
 }
 
 # Start Redis subscriber for real-time A2A messaging
@@ -369,81 +361,48 @@ start_redis_subscriber() {
     return 1
 }
 
-# Start LangFuse observability client
+# Start LangFuse observability client (DEPRECATED - Module removed in v2.0.3)
 start_langfuse() {
-    if [ "${LANGFUSE_ENABLED:-false}" = "false" ]; then
-        log "INFO" "LangFuse disabled (LANGFUSE_ENABLED=false)"
-        return 0
-    fi
-    
-    if [ -z "${LANGFUSE_PUBLIC_KEY:-}" ] || [ -z "${LANGFUSE_SECRET_KEY:-}" ]; then
-        log "WARN" "LangFuse enabled but keys not configured"
-        return 1
-    fi
-    
-    log "INFO" "Starting LangFuse observability..."
-    
-    # Check if Node.js is available
-    if command -v node &> /dev/null; then
-        if [ -f "/app/modules/observability/langfuse-client.js" ]; then
-            log "INFO" "Initializing LangFuse client"
-            # Run in background with output to log
-            node /app/modules/observability/langfuse-client.js > /dev/null 2>&1 &
-            log "INFO" "LangFuse observability started"
-            return 0
-        fi
-    fi
-    
-    log "WARN" "LangFuse module not found"
-    return 1
+  if [ "${LANGFUSE_ENABLED:-false}" = "false" ]; then
+    log "INFO" "LangFuse disabled (LANGFUSE_ENABLED=false)"
+    return 0
+  fi
+  
+  if [ -z "${LANGFUSE_PUBLIC_KEY:-}" ] || [ -z "${LANGFUSE_SECRET_KEY:-}" ]; then
+    log "WARN" "LangFuse enabled but keys not configured"
+    return 0
+  fi
+  
+  log "INFO" "LangFuse observability is now handled by OpenClaw Gateway"
+  log "INFO" "The langfuse-client.js module was removed in v2.0.3"
+  log "INFO" "Configure Gateway-level LangFuse integration instead"
+  return 0
 }
 
-# Start OpenTelemetry for distributed tracing
+# Start OpenTelemetry for distributed tracing (DEPRECATED - Module removed in v2.0.3)
 start_opentelemetry() {
-    if [ "${OTEL_ENABLED:-false}" = "false" ]; then
-        log "INFO" "OpenTelemetry disabled (OTEL_ENABLED=false)"
-        return 0
-    fi
-    
-    log "INFO" "Starting OpenTelemetry for distributed tracing..."
-    
-    # Check if Node.js is available
-    if command -v node &> /dev/null; then
-        if [ -f "/app/modules/observability/opentelemetry.js" ]; then
-            log "INFO" "Initializing OpenTelemetry"
-            # Run in background with output to log
-            node /app/modules/observability/opentelemetry.js > /dev/null 2>&1 &
-            log "INFO" "OpenTelemetry tracing started"
-            return 0
-        fi
-    fi
-    
-    log "WARN" "OpenTelemetry module not found"
-    return 1
+  if [ "${OTEL_ENABLED:-false}" = "false" ]; then
+    log "INFO" "OpenTelemetry disabled (OTEL_ENABLED=false)"
+    return 0
+  fi
+  
+  log "INFO" "OpenTelemetry tracing is now handled by OpenClaw Gateway"
+  log "INFO" "The opentelemetry.js module was removed in v2.0.3"
+  log "INFO" "Configure Gateway-level OpenTelemetry integration instead"
+  return 0
 }
 
-# Start Multi-Collective Registry for inter-collective communication
+# Start Multi-Collective Registry for inter-collective communication (DEPRECATED - Module removed in v2.0.3)
 start_multi_collective() {
-    if [ -z "${COLLECTIVE_NAME:-}" ]; then
-        log "INFO" "Multi-collective disabled (COLLECTIVE_NAME not set)"
-        return 0
-    fi
-    
-    log "INFO" "Starting Multi-Collective Registry..."
-    
-    # Check if Node.js is available
-    if command -v node &> /dev/null; then
-        if [ -f "/app/modules/collective/registry.js" ]; then
-            log "INFO" "Initializing Multi-Collective Registry"
-            # Run in background with output to log
-            node /app/modules/collective/registry.js > /dev/null 2>&1 &
-            log "INFO" "Multi-Collective Registry started"
-            return 0
-        fi
-    fi
-    
-    log "WARN" "Multi-Collective module not found"
-    return 1
+  if [ -z "${COLLECTIVE_NAME:-}" ]; then
+    log "INFO" "Multi-collective disabled (COLLECTIVE_NAME not set)"
+    return 0
+  fi
+  
+  log "INFO" "Multi-Collective Registry is now handled by OpenClaw Gateway"
+  log "INFO" "The collective/registry.js module was removed in v2.0.3"
+  log "INFO" "Configure Gateway-level multi-collective support instead"
+  return 0
 }
 
 # Main loop
