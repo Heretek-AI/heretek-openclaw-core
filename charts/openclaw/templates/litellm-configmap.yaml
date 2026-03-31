@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openclaw.fullname" . }}-litellm-config
+  labels:
+    {{- include "openclaw.litellm.labels" . | nindent 4 }}
+data:
+  litellm_config.yaml: |
+    model_list:
+      # OpenClaw Gateway Agent Models (A2A Protocol)
+      - model_name: agent/steward
+        litellm_params:
+          model: openclaw/steward
+          a2a_enabled: true
+        model_info:
+          id: agent/steward
+          mode: chat
+          
+      - model_name: agent/alpha
+        litellm_params:
+          model: openclaw/alpha
+          a2a_enabled: true
+        model_info:
+          id: agent/alpha
+          mode: chat
+          
+      - model_name: agent/beta
+        litellm_params:
+          model: openclaw/beta
+          a2a_enabled: true
+        model_info:
+          id: agent/beta
+          mode: chat
+          
+      - model_name: agent/charlie
+        litellm_params:
+          model: openclaw/charlie
+          a2a_enabled: true
+        model_info:
+          id: agent/charlie
+          mode: chat
+          
+      - model_name: agent/examiner
+        litellm_params:
+          model: openclaw/examiner
+          a2a_enabled: true
+        model_info:
+          id: agent/examiner
+          mode: chat
+          
+      - model_name: agent/explorer
+        litellm_params:
+          model: openclaw/explorer
+          a2a_enabled: true
+        model_info:
+          id: agent/explorer
+          mode: chat
+          
+      - model_name: agent/sentinel
+        litellm_params:
+          model: openclaw/sentinel
+          a2a_enabled: true
+        model_info:
+          id: agent/sentinel
+          mode: chat
+          
+      - model_name: agent/coder
+        litellm_params:
+          model: openclaw/coder
+          a2a_enabled: true
+        model_info:
+          id: agent/coder
+          mode: chat
+          
+      - model_name: agent/dreamer
+        litellm_params:
+          model: openclaw/dreamer
+          a2a_enabled: true
+        model_info:
+          id: agent/dreamer
+          mode: chat
+          
+      - model_name: agent/empath
+        litellm_params:
+          model: openclaw/empath
+          a2a_enabled: true
+        model_info:
+          id: agent/empath
+          mode: chat
+          
+      - model_name: agent/historian
+        litellm_params:
+          model: openclaw/historian
+          a2a_enabled: true
+        model_info:
+          id: agent/historian
+          mode: chat
+
+      # Primary Provider - MiniMax
+      - model_name: minimax-main
+        litellm_params:
+          model: minimax/minimax-abab6.5
+          api_key: os.environ/MINIMAX_API_KEY
+          api_base: {{ .Values.litellm.config.minimaxApiBase | default "https://api.minimaxi.chat/v1" | quote }}
+        model_info:
+          id: minimax-main
+          mode: chat
+          
+      # Failover Provider - z.ai
+      - model_name: zai-failover
+        litellm_params:
+          model: zai/glm-4-flash
+          api_key: os.environ/ZAI_API_KEY
+          api_base: {{ .Values.litellm.config.zaiApiBase | default "https://api.z.ai/api/coding/paas/v4" | quote }}
+        model_info:
+          id: zai-failover
+          mode: chat
+
+      # Ollama Local Models (when enabled)
+      {{- if .Values.ollama.enabled }}
+      - model_name: ollama-local
+        litellm_params:
+          model: ollama/llama3.1
+          api_base: http://{{ include "openclaw.fullname" . }}-ollama:11434
+        model_info:
+          id: ollama-local
+          mode: chat
+          
+      - model_name: ollama-embedding
+        litellm_params:
+          model: ollama/nomic-embed-text-v2-moe
+          api_base: http://{{ include "openclaw.fullname" . }}-ollama:11434
+        model_info:
+          id: ollama-embedding
+          mode: embedding
+      {{- end }}
+
+    # Router configuration for failover
+    router_settings:
+      routing_strategy: simple-shuffle
+      set_verbose: false
+      num_retries: 3
+      timeout: 30
+      fallbacks:
+        - minimax-main: [zai-failover]
+
+    # General settings
+    general_settings:
+      master_key: os.environ/LITELLM_MASTER_KEY
+      store_model_in_db: true
+      drop_params: true
+      completion_callback:
+        - langfuse
+
+    # Logging configuration
+    logging:
+      version: 1
+      disable_existing_loggers: false
+      formatters:
+        default:
+          format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+      handlers:
+        console:
+          class: logging.StreamHandler
+          formatter: default
+          level: {{ .Values.litellm.config.logLevel | upper }}
+      root:
+        level: {{ .Values.litellm.config.logLevel | upper }}
+        handlers: [console]

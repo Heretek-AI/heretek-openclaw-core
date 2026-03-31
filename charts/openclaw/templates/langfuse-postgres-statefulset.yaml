@@ -1,0 +1,94 @@
+{{- if and .Values.langfuse.enabled .Values.langfuse.postgresql.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "openclaw.fullname" . }}-langfuse-postgres
+  labels:
+    {{- include "openclaw.langfuse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: langfuse-postgres
+spec:
+  serviceName: {{ include "openclaw.fullname" . }}-langfuse-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "openclaw.langfuse.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: langfuse-postgres
+  template:
+    metadata:
+      labels:
+        {{- include "openclaw.langfuse.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: langfuse-postgres
+    spec:
+      {{- with .Values.langfuse.postgresql.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "openclaw.serviceAccountName" . }}
+      containers:
+        - name: postgres
+          image: "{{ .Values.langfuse.postgresql.image.repository }}:{{ .Values.langfuse.postgresql.image.tag }}"
+          imagePullPolicy: {{ .Values.langfuse.postgresql.image.pullPolicy }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+              protocol: TCP
+          env:
+            - name: POSTGRES_USER
+              value: langfuse
+            - name: POSTGRES_DB
+              value: langfuse
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openclaw.fullname" . }}-langfuse-secret
+                  key: postgres-password
+                  optional: true
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - langfuse
+                - -d
+                - langfuse
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - langfuse
+                - -d
+                - langfuse
+            initialDelaySeconds: 30
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.langfuse.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: langfuse-postgres
+      {{- if .Values.langfuse.postgresql.persistence.enabled }}
+      volumeClaimTemplates:
+        - metadata:
+            name: data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            {{- if .Values.langfuse.postgresql.persistence.storageClass }}
+            storageClassName: {{ .Values.langfuse.postgresql.persistence.storageClass }}
+            {{- end }}
+            resources:
+              requests:
+                storage: {{ .Values.langfuse.postgresql.persistence.size }}
+      {{- else }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+{{- end }}

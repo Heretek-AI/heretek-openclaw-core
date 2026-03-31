@@ -1,0 +1,19 @@
+{{- if and .Values.langfuse.enabled .Values.langfuse.postgresql.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openclaw.fullname" . }}-langfuse-postgres
+  labels:
+    {{- include "openclaw.langfuse.labels" . | nindent 4 }}
+    app.kubernetes.io/component: langfuse-postgres
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5432
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    {{- include "openclaw.langfuse.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: langfuse-postgres
+{{- end }}

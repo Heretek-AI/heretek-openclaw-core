@@ -1,0 +1,17 @@
+{{- if .Values.langfuse.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "openclaw.fullname" . }}-langfuse
+  labels:
+    {{- include "openclaw.langfuse.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.langfuse.service.type }}
+  ports:
+    - port: {{ .Values.langfuse.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "openclaw.langfuse.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -1,0 +1,22 @@
+apiVersion: v2
+name: openclaw
+description: Heretek OpenClaw - Autonomous AI Agent Collective
+type: application
+version: 0.1.0
+appVersion: "2026.3.28"
+keywords:
+  - ai
+  - multi-agent
+  - llm
+  - autonomous
+  - openclaw
+  - heretek
+home: https://github.com/heretek-ai/heretek-openclaw
+sources:
+  - https://github.com/heretek-ai/heretek-openclaw
+maintainers:
+  - name: Heretek AI
+    email: support@heretek.ai
+annotations:
+  artifacthub.io/license: MIT
+  artifacthub.io/category: ai-machine-learning

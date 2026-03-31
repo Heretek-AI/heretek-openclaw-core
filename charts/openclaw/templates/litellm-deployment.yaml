@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openclaw.fullname" . }}-litellm
+  labels:
+    {{- include "openclaw.litellm.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.litellm.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "openclaw.litellm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/litellm-configmap.yaml") . | sha256sum }}
+      labels:
+        {{- include "openclaw.litellm.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.litellm.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "openclaw.serviceAccountName" . }}
+      containers:
+        - name: litellm
+          image: "{{ .Values.litellm.image.repository }}:{{ .Values.litellm.image.tag }}"
+          imagePullPolicy: {{ .Values.litellm.image.pullPolicy }}
+          args:
+            - --config
+            - /app/config.yaml
+            - --port
+            - "4000"
+            - --num_workers
+            - "4"
+          ports:
+            - name: http
+              containerPort: 4000
+              protocol: TCP
+          env:
+            - name: DATABASE_URL
+              value: postgresql://{{ .Values.postgresql.auth.username }}:$(POSTGRES_PASSWORD)@{{ include "openclaw.fullname" . }}-postgresql:5432/{{ .Values.postgresql.auth.database }}
+            - name: REDIS_URL
+              value: redis://{{ include "openclaw.fullname" . }}-redis:6379/0
+            - name: REDIS_HOST
+              value: {{ include "openclaw.fullname" . }}-redis
+            - name: REDIS_PORT
+              value: "6379"
+            - name: AGENT_MODE_ENABLED
+              value: "true"
+            - name: AGENT_A2A_VERSION
+              value: "1.0"
+            - name: STORE_MODEL_IN_DB
+              value: "True"
+            - name: LITELLM_DROP_PARAMS
+              value: "True"
+            - name: LITELLM_COST_TRACKING_ENABLED
+              value: {{ .Values.litellm.config.costTrackingEnabled | quote }}
+            - name: LITELLM_METRICS_ENABLED
+              value: {{ .Values.litellm.config.metricsEnabled | quote }}
+            - name: LITELLM_LOG_LEVEL
+              value: {{ .Values.litellm.config.logLevel }}
+            {{- if .Values.langfuse.enabled }}
+            - name: LANGFUSE_ENABLED
+              value: "true"
+            - name: LANGFUSE_HOST
+              value: http://{{ include "openclaw.fullname" . }}-langfuse:3000
+            {{- end }}
+            {{- if .Values.externalSecrets.enabled }}
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openclaw.fullname" . }}-external-secret
+                  key: litellm-master-key
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openclaw.fullname" . }}-external-secret
+                  key: postgres-password
+            {{- else }}
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openclaw.fullname" . }}-secrets
+                  key: litellm-master-key
+                  optional: true
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "openclaw.fullname" . }}-secrets
+                  key: postgres-password
+                  optional: true
+            {{- end }}
+          envFrom:
+            - secretRef:
+                name: {{ include "openclaw.fullname" . }}-secrets
+                optional: true
+          livenessProbe:
+            httpGet:
+              path: /health/liveliness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.litellm.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/config.yaml
+              subPath: litellm_config.yaml
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "openclaw.fullname" . }}-litellm-config
+      {{- with .Values.litellm.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.litellm.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.litellm.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

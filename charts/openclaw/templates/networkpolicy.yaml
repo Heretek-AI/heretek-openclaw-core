@@ -1,0 +1,343 @@
+{{- if .Values.networkPolicy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openclaw.fullname" . }}-default-deny
+  labels:
+    {{- include "openclaw.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openclaw.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Gateway Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openclaw.fullname" . }}-gateway-policy
+  labels:
+    {{- include "openclaw.gateway.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openclaw.gateway.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from LiteLLM
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.litellm.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 18789
+    # Allow ingress from external (ingress controller or load balancer)
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 18789
+  egress:
+    # Allow egress to LiteLLM
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.litellm.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 4000
+    # Allow egress to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.postgresql.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow egress to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.redis.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow egress to Neo4j
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.neo4j.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 7687
+    # Allow egress to Langfuse
+    {{- if .Values.langfuse.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.langfuse.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 3000
+    {{- end }}
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# LiteLLM Network Policy
+{{- if .Values.litellm.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openclaw.fullname" . }}-litellm-policy
+  labels:
+    {{- include "openclaw.litellm.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openclaw.litellm.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from Gateway
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.gateway.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 4000
+    # Allow ingress from external (for direct API access)
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 4000
+  egress:
+    # Allow egress to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.postgresql.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow egress to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.redis.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow egress to Ollama (if enabled)
+    {{- if .Values.ollama.enabled }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.ollama.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 11434
+    {{- end }}
+    # Allow egress to external providers (MiniMax, z.ai, etc.)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+{{- end }}
+---
+# PostgreSQL Network Policy
+{{- if .Values.postgresql.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openclaw.fullname" . }}-postgresql-policy
+  labels:
+    {{- include "openclaw.postgresql.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openclaw.postgresql.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from Gateway and LiteLLM
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.gateway.selectorLabels" . | nindent 14 }}
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.litellm.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 5432
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+{{- end }}
+---
+# Redis Network Policy
+{{- if .Values.redis.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openclaw.fullname" . }}-redis-policy
+  labels:
+    {{- include "openclaw.redis.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openclaw.redis.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from Gateway and LiteLLM
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.gateway.selectorLabels" . | nindent 14 }}
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.litellm.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 6379
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+{{- end }}
+---
+# Neo4j Network Policy
+{{- if .Values.neo4j.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openclaw.fullname" . }}-neo4j-policy
+  labels:
+    {{- include "openclaw.neo4j.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openclaw.neo4j.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from Gateway
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.gateway.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 7687
+        - protocol: TCP
+          port: 7474
+  egress:
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+{{- end }}
+---
+# Langfuse Network Policy
+{{- if .Values.langfuse.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "openclaw.fullname" . }}-langfuse-policy
+  labels:
+    {{- include "openclaw.langfuse.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "openclaw.langfuse.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow ingress from Gateway and LiteLLM
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.gateway.selectorLabels" . | nindent 14 }}
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.litellm.selectorLabels" . | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 3000
+    # Allow ingress from external (for dashboard access)
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    # Allow egress to Langfuse PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "openclaw.langfuse.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: langfuse-postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+{{- end }}
+{{- end }}

@@ -1,0 +1,48 @@
+{
+  "name": "@heretek/browser-access",
+  "version": "1.0.0",
+  "description": "Headless browser automation for web research and intelligence gathering - Explorer agent skill",
+  "main": "browser-controller.js",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "lint": "eslint . --ext .js",
+    "navigate": "node browser-controller.js --navigate",
+    "scrape": "node scraper.js",
+    "screenshot": "node browser-controller.js --screenshot",
+    "pdf": "node browser-controller.js --pdf",
+    "interact": "node form-interactor.js"
+  },
+  "keywords": [
+    "browser-automation",
+    "puppeteer",
+    "web-scraping",
+    "headless-browser",
+    "explorer-agent",
+    "heretek",
+    "openclaw"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^22.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "puppeteer-extra-plugin-adblocker": "^2.13.6",
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/heretek-ai/heretek-openclaw.git",
+    "directory": "skills/browser-access"
+  },
+  "bugs": {
+    "url": "https://github.com/heretek-ai/heretek-openclaw/issues"
+  },
+  "homepage": "https://github.com/heretek-ai/heretek-openclaw/tree/main/skills/browser-access#readme"
+}

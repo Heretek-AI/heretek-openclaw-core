@@ -1,0 +1,413 @@
+# ==============================================================================
+# Heretek OpenClaw - Helm Chart Values
+# ==============================================================================
+# Default configuration for the OpenClaw AI Agent Collective
+# ==============================================================================
+
+# -- Global settings
+global:
+  # -- Deployment environment (development, staging, production)
+  environment: development
+  # -- Common labels applied to all resources
+  labels:
+    app.kubernetes.io/part-of: openclaw
+    app.kubernetes.io/managed-by: helm
+
+# ==============================================================================
+# OpenClaw Gateway Configuration
+# ==============================================================================
+gateway:
+  # -- Number of gateway replicas
+  replicaCount: 1
+  # -- Gateway image configuration
+  image:
+    repository: heretek/openclaw-gateway
+    tag: "2026.3.28"
+    pullPolicy: IfNotPresent
+  # -- Resource limits and requests
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+  # -- Autoscaling configuration
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 18789
+  # -- Ingress configuration
+  ingress:
+    enabled: false
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: openclaw.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+  # -- Pod security context
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  # -- Container security context
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+# ==============================================================================
+# LiteLLM Gateway Configuration
+# ==============================================================================
+litellm:
+  # -- Enable LiteLLM Gateway
+  enabled: true
+  # -- Number of replicas
+  replicaCount: 1
+  # -- LiteLLM image configuration
+  image:
+    repository: ghcr.io/berriai/litellm
+    tag: main-latest
+    pullPolicy: IfNotPresent
+  # -- Resource limits and requests
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 4000
+  # -- LiteLLM configuration
+  config:
+    # -- Master key for LiteLLM API (use secrets in production)
+    masterKey: null
+    # -- Enable cost tracking
+    costTrackingEnabled: true
+    # -- Enable metrics
+    metricsEnabled: true
+    # -- Log level
+    logLevel: INFO
+
+# ==============================================================================
+# PostgreSQL with pgvector Configuration
+# ==============================================================================
+postgresql:
+  # -- Enable PostgreSQL (set false if using external database)
+  enabled: true
+  # -- PostgreSQL image configuration
+  image:
+    repository: pgvector/pgvector
+    tag: pg17
+    pullPolicy: IfNotPresent
+  # -- Number of replicas
+  replicaCount: 1
+  # -- Authentication
+  auth:
+    # -- PostgreSQL username
+    username: heretek
+    # -- PostgreSQL database name
+    database: heretek
+    # -- PostgreSQL password (use secrets in production)
+    password: null
+    # -- Existing secret name
+    existingSecret: null
+    # -- Secret key for password
+    secretKey: postgres-password
+  # -- Resource limits and requests
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+  # -- Persistence configuration
+  persistence:
+    enabled: true
+    size: 50Gi
+    storageClass: null
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 5432
+
+# ==============================================================================
+# Redis Configuration
+# ==============================================================================
+redis:
+  # -- Enable Redis (set false if using external Redis)
+  enabled: true
+  # -- Redis image configuration
+  image:
+    repository: redis
+    tag: 7-alpine
+    pullPolicy: IfNotPresent
+  # -- Number of replicas
+  replicaCount: 1
+  # -- Redis password (use secrets in production)
+  password: null
+  # -- Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  # -- Persistence configuration
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: null
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 6379
+
+# ==============================================================================
+# Ollama Configuration (Local LLM)
+# ==============================================================================
+ollama:
+  # -- Enable Ollama for local LLM inference
+  enabled: false
+  # -- Ollama image configuration (ROCm for AMD GPU)
+  image:
+    repository: ollama/ollama
+    tag: rocm
+    pullPolicy: IfNotPresent
+  # -- GPU support configuration
+  gpu:
+    # -- Enable GPU acceleration
+    enabled: false
+    # -- GPU type (nvidia, amd)
+    type: amd
+  # -- Resource limits and requests
+  resources:
+    limits:
+      cpu: 8000m
+      memory: 16Gi
+      # -- GPU resource (uncomment for GPU support)
+      # nvidia.com/gpu: 1
+    requests:
+      cpu: 4000m
+      memory: 8Gi
+  # -- Persistence configuration
+  persistence:
+    enabled: true
+    size: 100Gi
+    storageClass: null
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 11434
+  # -- Models to pull on startup
+  models:
+    - nomic-embed-text-v2-moe
+
+# ==============================================================================
+# Neo4j Configuration (GraphRAG)
+# ==============================================================================
+neo4j:
+  # -- Enable Neo4j for GraphRAG
+  enabled: true
+  # -- Neo4j image configuration
+  image:
+    repository: neo4j
+    tag: 5.15
+    pullPolicy: IfNotPresent
+  # -- Authentication
+  auth:
+    # -- Neo4j username
+    username: neo4j
+    # -- Neo4j password (use secrets in production)
+    password: null
+    # -- Existing secret name
+    existingSecret: null
+  # -- Resource limits and requests
+  resources:
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+  # -- Persistence configuration
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: null
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    httpPort: 7474
+    boltPort: 7687
+
+# ==============================================================================
+# Langfuse Observability Configuration
+# ==============================================================================
+langfuse:
+  # -- Enable Langfuse observability
+  enabled: true
+  # -- Langfuse image configuration
+  image:
+    repository: langfuse/langfuse
+    tag: latest
+    pullPolicy: IfNotPresent
+  # -- Number of replicas
+  replicaCount: 1
+  # -- Resource limits and requests
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  # -- Service configuration
+  service:
+    type: ClusterIP
+    port: 3000
+  # -- Ingress configuration
+  ingress:
+    enabled: false
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: langfuse.local
+        paths:
+          - path: /
+            pathType: Prefix
+  # -- PostgreSQL for Langfuse (internal)
+  postgresql:
+    enabled: true
+    image:
+      repository: postgres
+      tag: 15-alpine
+    persistence:
+      enabled: true
+      size: 20Gi
+  # -- Configuration
+  config:
+    # -- Salt for password hashing
+    salt: null
+    # -- NextAuth secret
+    nextAuthSecret: null
+    # -- Enable sign up
+    signUpEnabled: true
+    # -- Telemetry
+    telemetryEnabled: false
+
+# ==============================================================================
+# Network Policy Configuration
+# ==============================================================================
+networkPolicy:
+  # -- Enable network policies
+  enabled: true
+  # -- Default policy (Allow or Deny)
+  defaultPolicy: Deny
+  # -- Allowed namespaces for cross-namespace communication
+  allowedNamespaces: []
+  # -- Allowed pod selectors for ingress
+  ingressRules: []
+  # -- Allowed pod selectors for egress
+  egressRules: []
+
+# ==============================================================================
+# Service Account Configuration
+# ==============================================================================
+serviceAccount:
+  # -- Create service account
+  create: true
+  # -- Service account name
+  name: openclaw
+  # -- Annotations for service account
+  annotations: {}
+  # -- Auto-mount service account token
+  automount: true
+
+# ==============================================================================
+# Pod Disruption Budget Configuration
+# ==============================================================================
+podDisruptionBudget:
+  # -- Enable PDB
+  enabled: false
+  # -- Minimum available pods
+  minAvailable: 1
+  # -- Maximum unavailable pods
+  maxUnavailable: null
+
+# ==============================================================================
+# Monitoring Configuration
+# ==============================================================================
+monitoring:
+  # -- Enable Prometheus metrics
+  enabled: true
+  # -- ServiceMonitor configuration
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+  # -- PrometheusRule configuration
+  prometheusRule:
+    enabled: false
+    rules: []
+
+# ==============================================================================
+# Secret Management
+# ==============================================================================
+# -- Use external secrets manager (set true to use external secrets)
+externalSecrets:
+  enabled: false
+  # -- External secrets store (vault, aws, gcp, azure)
+  store: vault
+  # -- Refresh interval
+  refreshInterval: 1h
+
+# ==============================================================================
+# Environment-specific overrides
+# ==============================================================================
+# Development overrides
+development:
+  gateway:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+  litellm:
+    replicaCount: 1
+  postgresql:
+    persistence:
+      size: 10Gi
+
+# Production overrides
+production:
+  gateway:
+    replicaCount: 3
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+  litellm:
+    replicaCount: 2
+  postgresql:
+    persistence:
+      size: 100Gi
+  redis:
+    persistence:
+      size: 20Gi

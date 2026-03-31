@@ -49,6 +49,65 @@
 
 services:
   # ==============================================================================
+  # Langfuse — LLM Observability Platform (Self-Hosted)
+  # ==============================================================================
+  # Langfuse provides tracing, monitoring, and analytics for OpenClaw agents
+  # Access dashboard at: http://localhost:3000
+  # Documentation: docs/operations/LANGFUSE_OBSERVABILITY.md
+  # ==============================================================================
+  langfuse:
+    image: langfuse/langfuse:latest
+    container_name: heretek-langfuse
+    restart: unless-stopped
+    ports:
+      - "${LANGFUSE_PORT:-3000}:3000"
+    environment:
+      # ─────────────────────────────────────────────────────────────────────────
+      # Langfuse Core Settings
+      # ─────────────────────────────────────────────────────────────────────────
+      - DATABASE_URL=postgresql://langfuse:${LANGFUSE_POSTGRES_PASSWORD}@langfuse-postgres:5432/langfuse
+      - SALT=${LANGFUSE_SALT}
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=http://localhost:${LANGFUSE_PORT:-3000}
+      - TELEMETRY_ENABLED=${LANGFUSE_TELEMETRY_ENABLED:-false}
+      - AUTH_OPTIONS=CREDENTIALS
+      - SIGN_UP_ENABLED=${LANGFUSE_SIGN_UP_ENABLED:-true}
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+    volumes:
+      - langfuse_blobs:/app/.blobs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - heretek-network
+
+  # ==============================================================================
+  # Langfuse PostgreSQL Database
+  # ==============================================================================
+  langfuse-postgres:
+    image: postgres:15-alpine
+    container_name: heretek-langfuse-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=langfuse
+      - POSTGRES_PASSWORD=${LANGFUSE_POSTGRES_PASSWORD}
+      - POSTGRES_DB=langfuse
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - heretek-network
+
+  # ==============================================================================
   # LiteLLM Gateway — Unified LLM API with A2A Protocol
   # ==============================================================================
   # Passthrough Endpoints: Each agent has a virtual model (agent/steward, etc.)
@@ -906,6 +965,12 @@ volumes:
   ollama_data:
     driver: local
   
+  # Langfuse observability
+  langfuse_postgres_data:
+    driver: local
+  langfuse_blobs:
+    driver: local
+  
   # Collective memory (skills are bind-mounted, not a volume)
   collective_memory:
     driver: local
@@ -934,6 +999,12 @@ volumes:
     driver: local
   agent_memory_historian:
     driver: local
+  
+  # Monitoring Stack (P2-3)
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
 
 # ==============================================================================
 # Networks — Container Communication
@@ -944,3 +1015,15 @@ networks:
     ipam:
       config:
         - subnet: 172.28.0.0/16
+
+# ==============================================================================
+# END OF DOCKER-COMPOSE.YML
+# ==============================================================================
+# Note: Monitoring Stack services (Prometheus, Grafana, exporters) have been
+# moved to docker-compose.monitoring.yml for modular deployment.
+#
+# To deploy the monitoring stack:
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+#
+# Documentation: docs/operations/MONITORING_STACK.md
+# ==============================================================================
