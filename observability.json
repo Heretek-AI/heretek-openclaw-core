@@ -1,0 +1,275 @@
+{
+  "$schema": "./docs/observability/schema.json",
+  "version": "1.0.0",
+  "description": "Heretek Observability Configuration - P0 Implementation",
+  
+  "enabled": true,
+  
+  "langfuse": {
+    "enabled": true,
+    "publicKey": "${LANGFUSE_PUBLIC_KEY}",
+    "secretKey": "${LANGFUSE_SECRET_KEY}",
+    "host": "${LANGFUSE_HOST:-http://localhost:3000}",
+    "environment": "${LANGFUSE_ENVIRONMENT:-development}",
+    "release": "${LANGFUSE_RELEASE:-1.0.0}",
+    "mode": "${LANGFUSE_MODE:-production}",
+    "debug": "${LANGFUSE_DEBUG:-false}",
+    "samplingRate": 1.0,
+    
+    "features": {
+      "triadDeliberationTracing": true,
+      "consciousnessMetrics": true,
+      "consensusLedgerTracking": true,
+      "agentDecisionCycles": true,
+      "costTracking": true,
+      "sessionAnalytics": true
+    },
+    
+    "triadConfig": {
+      "agents": ["alpha", "beta", "charlie"],
+      "stewardOverride": true,
+      "consensusThreshold": 2,
+      "trackDeliberationProgress": true,
+      "recordVoteReasoning": true
+    },
+    
+    "consciousnessConfig": {
+      "gwtEnabled": true,
+      "iitEnabled": true,
+      "astEnabled": true,
+      "intrinsicMotivationTracking": true,
+      "compositeScoreCalculation": "average",
+      "stateThresholds": {
+        "highlyConscious": 0.8,
+        "conscious": 0.6,
+        "semiConscious": 0.4,
+        "minimalConsciousness": 0.2
+      }
+    }
+  },
+  
+  "metrics": {
+    "enabled": true,
+    "redisUrl": "${REDIS_URL:-redis://localhost:6379}",
+    "exportInterval": 60000,
+    "storageBackend": "redis",
+    
+    "triadMetrics": {
+      "deliberationTime": true,
+      "consensusRate": true,
+      "stewardOverrideRate": true,
+      "voteDistribution": true,
+      "deliberationDepth": true
+    },
+    
+    "consciousnessMetrics": {
+      "gwtScore": true,
+      "iitScore": true,
+      "astScore": true,
+      "compositeScore": true,
+      "stateDistribution": true,
+      "trendAnalysis": true
+    },
+    
+    "agentMetrics": {
+      "responseTime": true,
+      "tokenUsage": true,
+      "costPerAgent": true,
+      "successRate": true,
+      "errorRate": true,
+      "throughput": true
+    },
+    
+    "aggregationPeriods": ["1m", "1h", "1d", "1w"],
+    
+    "alerts": {
+      "enabled": false,
+      "thresholds": {
+        "highLatency": 5000,
+        "highErrorRate": 0.05,
+        "lowConsensusRate": 0.5,
+        "lowConsciousnessScore": 0.3
+      }
+    }
+  },
+  
+  "dashboard": {
+    "enabled": true,
+    "dashboardUrl": "${DASHBOARD_URL:-http://localhost:3001}",
+    "redisUrl": "${REDIS_URL:-redis://localhost:6379}",
+    "gatewayPort": 18789,
+    "syncInterval": 5000,
+    
+    "realtimeUpdates": {
+      "enabled": true,
+      "websocketPush": true,
+      "redisPubSub": true
+    },
+    
+    "panels": {
+      "triadState": {
+        "enabled": true,
+        "refreshRate": 1000,
+        "showVoteProgress": true,
+        "showDeliberationTime": true
+      },
+      "consciousnessMetrics": {
+        "enabled": true,
+        "refreshRate": 5000,
+        "showRadarChart": true,
+        "showGaugeChart": true,
+        "showTrendLine": true
+      },
+      "agentHealth": {
+        "enabled": true,
+        "refreshRate": 5000,
+        "showStatusIndicators": true,
+        "showMetricsTable": true
+      },
+      "consensusLedger": {
+        "enabled": true,
+        "refreshRate": 10000,
+        "showHistory": true,
+        "showStatistics": true
+      },
+      "costTracking": {
+        "enabled": true,
+        "refreshRate": 60000,
+        "showPerAgent": true,
+        "showPerModel": true,
+        "showDailyTotal": true
+      }
+    }
+  },
+  
+  "traceContext": {
+    "enabled": true,
+    "propagationFormat": "heretek",
+    "headerName": "x-heretek-trace-context",
+    "baggageHeaderName": "x-heretek-trace-baggage",
+    
+    "a2aPropagation": {
+      "enabled": true,
+      "injectIntoMessages": true,
+      "extractFromMessages": true,
+      "trackPropagationHistory": true
+    },
+    
+    "websocketPropagation": {
+      "enabled": true,
+      "includeInMetadata": true
+    },
+    
+    "redisPropagation": {
+      "enabled": true,
+      "includeInPubSub": true
+    }
+  },
+  
+  "privacy": {
+    "enabled": true,
+    "redactionRules": [
+      {
+        "name": "api-keys",
+        "pattern": "(?i)(api[_-]?key|apikey|secret[_-]?key|token|bearer)\\s*[\":=]\\s*[\"']?[a-zA-Z0-9]{20,}[\"']?",
+        "replacement": "[REDACTED_API_KEY]",
+        "enabled": true
+      },
+      {
+        "name": "email-addresses",
+        "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+        "replacement": "[REDACTED_EMAIL]",
+        "enabled": true
+      },
+      {
+        "name": "credit-cards",
+        "pattern": "\\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})\\b",
+        "replacement": "[REDACTED_CC]",
+        "enabled": true
+      }
+    ],
+    
+    "sessionDataRetention": {
+      "traces": "30d",
+      "metrics": "90d",
+      "consensusLedger": "365d",
+      "consciousnessMetrics": "90d"
+    },
+    
+    "piiHandling": {
+      "maskUserIdentities": false,
+      "anonymizeSessions": false,
+      "gdprCompliant": true
+    }
+  },
+  
+  "integrations": {
+    "litellm": {
+      "enabled": true,
+      "endpoint": "${LITELLM_ENDPOINT:-http://localhost:4000}",
+      "trackTokenUsage": true,
+      "trackLatency": true,
+      "trackCost": true,
+      "modelAliases": true
+    },
+    
+    "grafana": {
+      "enabled": false,
+      "endpoint": "${GRAFANA_ENDPOINT}",
+      "apiKey": "${GRAFANA_API_KEY}",
+      "dashboardUid": "${GRAFANA_DASHBOARD_UID}"
+    },
+    
+    "prometheus": {
+      "enabled": false,
+      "endpoint": "${PROMETHEUS_ENDPOINT:-http://localhost:9090}",
+      "pushGateway": "${PROMETHEUS_PUSHGATEWAY}",
+      "jobName": "heretek-openclaw"
+    }
+  },
+  
+  "modes": {
+    "offline": {
+      "description": "Local Langfuse instance for development",
+      "langfuse": {
+        "host": "http://localhost:3000",
+        "environment": "development"
+      },
+      "metrics": {
+        "storageBackend": "memory"
+      },
+      "dashboard": {
+        "enabled": false
+      }
+    },
+    
+    "cloud": {
+      "description": "Langfuse Cloud for production",
+      "langfuse": {
+        "host": "https://cloud.langfuse.com",
+        "environment": "production"
+      },
+      "metrics": {
+        "storageBackend": "redis"
+      },
+      "dashboard": {
+        "enabled": true
+      }
+    },
+    
+    "hybrid": {
+      "description": "Local Langfuse with cloud dashboard",
+      "langfuse": {
+        "host": "http://localhost:3000",
+        "environment": "production"
+      },
+      "metrics": {
+        "storageBackend": "redis"
+      },
+      "dashboard": {
+        "enabled": true,
+        "dashboardUrl": "${DASHBOARD_URL}"
+      }
+    }
+  }
+}
