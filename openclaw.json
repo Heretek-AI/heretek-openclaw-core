@@ -1,30 +1,37 @@
 {
-  "version": "2.0.0",
-  "collective": {
-    "name": "Heretek OpenClaw",
-    "description": "Self-improving autonomous agent collective with LiteLLM A2A protocol",
-    "created": "2026-03-28",
-    "version": "2.0.0",
-    "configuration": {
-      "primary_model": "minimax/MiniMax-M2.7",
-      "failover_model": "zai/glm-5-1",
-      "embedding_model": "ollama/nomic-embed-text-v2-moe",
-      "gpu_mode": "amd",
-      "passthrough_endpoints": true
+  "meta": {
+    "lastTouchedVersion": "2026.3.31",
+    "lastTouchedAt": "2026-04-01T03:57:21.359Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-04-01T03:57:21.348Z",
+    "lastRunVersion": "2026.3.31",
+    "lastRunCommand": "configure",
+    "lastRunMode": "local"
+  },
+  "auth": {
+    "profiles": {
+      "litellm:default": {
+        "provider": "litellm",
+        "mode": "api_key"
+      }
     }
   },
   "models": {
+    "mode": "merge",
     "providers": {
       "litellm": {
-        "enabled": true,
-        "base_url": "http://localhost:4000",
+        "baseUrl": "http://localhost:4000",
+        "api": "openai-completions",
         "models": [
           {
             "id": "agent/steward",
             "name": "steward",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -37,9 +44,11 @@
           {
             "id": "agent/alpha",
             "name": "alpha",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -52,9 +61,11 @@
           {
             "id": "agent/beta",
             "name": "beta",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -67,9 +78,11 @@
           {
             "id": "agent/charlie",
             "name": "charlie",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -82,9 +95,11 @@
           {
             "id": "agent/examiner",
             "name": "examiner",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -97,9 +112,11 @@
           {
             "id": "agent/explorer",
             "name": "explorer",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -112,9 +129,11 @@
           {
             "id": "agent/sentinel",
             "name": "sentinel",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -127,9 +146,11 @@
           {
             "id": "agent/coder",
             "name": "coder",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -142,9 +163,11 @@
           {
             "id": "agent/dreamer",
             "name": "dreamer",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -157,9 +180,11 @@
           {
             "id": "agent/empath",
             "name": "empath",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -172,9 +197,11 @@
           {
             "id": "agent/historian",
             "name": "historian",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -187,9 +214,11 @@
           {
             "id": "agent/arbiter",
             "name": "arbiter",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -202,9 +231,11 @@
           {
             "id": "agent/catalyst",
             "name": "catalyst",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -217,9 +248,11 @@
           {
             "id": "agent/chronos",
             "name": "chronos",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -232,9 +265,11 @@
           {
             "id": "agent/coordinator",
             "name": "coordinator",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -247,9 +282,11 @@
           {
             "id": "agent/echo",
             "name": "echo",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -262,9 +299,11 @@
           {
             "id": "agent/habit-forge",
             "name": "habit-forge",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -277,9 +316,11 @@
           {
             "id": "agent/metis",
             "name": "metis",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -292,9 +333,11 @@
           {
             "id": "agent/nexus",
             "name": "nexus",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -307,9 +350,11 @@
           {
             "id": "agent/perceiver",
             "name": "perceiver",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -322,9 +367,11 @@
           {
             "id": "agent/prism",
             "name": "prism",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -337,9 +384,28 @@
           {
             "id": "agent/sentinel-prime",
             "name": "sentinel-prime",
-            "api": "openai-completions",
             "reasoning": true,
-            "input": ["text", "image"],
+            "input": [
+              "text",
+              "image"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 128000,
+            "maxTokens": 8192
+          },
+          {
+            "id": "claude-opus-4-6",
+            "name": "Claude Opus 4.6",
+            "reasoning": true,
+            "input": [
+              "text",
+              "image"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -353,616 +419,244 @@
       }
     }
   },
-  "agents": [
-    {
-      "id": "steward",
-      "name": "Steward",
-      "role": "orchestrator",
-      "description": "Orchestrates the collective. Monitors agent health, enforces workflow, coordinates deliberation, manages proposals, triggers agent cycles, resolves deadlocks.",
-      "model": "agent/steward",
-      "session": "agent:heretek:steward",
-      "port": 8001,
-      "capabilities": [
-        "health_monitoring",
-        "workflow_enforcement",
-        "deliberation_coordination",
-        "proposal_management",
-        "agent_cycle_triggering",
-        "deadlock_resolution"
-      ],
-      "skills": [
-        "steward-orchestrator",
-        "triad-sync-protocol",
-        "fleet-backup"
-      ],
-      "parameters": {
-        "max_deliberation_cycles": 5,
-        "health_check_interval": 60,
-        "auto_recovery": true,
-        "consensus_threshold": 0.66
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "litellm/claude-opus-4-6",
+        "fallbacks": [
+          "litellm/agent/steward",
+          "litellm/agent/sentinel-prime",
+          "litellm/agent/sentinel",
+          "litellm/agent/prism",
+          "litellm/agent/perceiver",
+          "litellm/agent/nexus",
+          "litellm/agent/metis",
+          "litellm/agent/historian",
+          "litellm/agent/habit-forge",
+          "litellm/agent/explorer",
+          "litellm/agent/examiner",
+          "litellm/agent/empath",
+          "litellm/agent/echo",
+          "litellm/agent/dreamer",
+          "litellm/agent/coordinator",
+          "litellm/agent/coder",
+          "litellm/agent/chronos",
+          "litellm/agent/charlie",
+          "litellm/agent/catalyst",
+          "litellm/agent/beta",
+          "litellm/agent/arbiter",
+          "litellm/agent/alpha"
+        ]
+      },
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "models": {
+        "litellm/agent/steward": {},
+        "litellm/agent/sentinel-prime": {},
+        "litellm/agent/sentinel": {},
+        "litellm/agent/prism": {},
+        "litellm/agent/perceiver": {},
+        "litellm/agent/nexus": {},
+        "litellm/agent/metis": {},
+        "litellm/agent/historian": {},
+        "litellm/agent/habit-forge": {},
+        "litellm/agent/explorer": {},
+        "litellm/agent/examiner": {},
+        "litellm/agent/empath": {},
+        "litellm/agent/echo": {},
+        "litellm/agent/dreamer": {},
+        "litellm/agent/coordinator": {},
+        "litellm/agent/coder": {},
+        "litellm/claude-opus-4-6": {
+          "alias": "LiteLLM"
+        },
+        "litellm/agent/chronos": {},
+        "litellm/agent/charlie": {},
+        "litellm/agent/catalyst": {},
+        "litellm/agent/beta": {},
+        "litellm/agent/arbiter": {},
+        "litellm/agent/alpha": {}
       }
     },
-    {
-      "id": "alpha",
-      "name": "Alpha",
-      "role": "triad",
-      "description": "Triad member Alpha. Primary deliberator on proposals, maintains consensus ledger, participates in governance decisions.",
-      "model": "agent/alpha",
-      "session": "agent:heretek:alpha",
-      "port": 8002,
-      "capabilities": [
-        "proposal_deliberation",
-        "consensus_ledger_maintenance",
-        "governance_voting",
-        "proposal_creation"
-      ],
-      "skills": [
-        "governance-modules",
-        "triad-sync-protocol",
-        "curiosity-engine"
-      ],
-      "parameters": {
-        "vote_weight": 1.0,
-        "deliberation_timeout": 300
+    "list": [
+      {
+        "id": "main"
+      },
+      {
+        "id": "steward",
+        "name": "steward",
+        "workspace": "/root/.openclaw/agents/steward/workspace",
+        "agentDir": "/root/.openclaw/agents/steward",
+        "model": "litellm/agent/steward"
+      },
+      {
+        "id": "alpha",
+        "name": "alpha",
+        "workspace": "/root/.openclaw/agents/alpha/workspace",
+        "agentDir": "/root/.openclaw/agents/alpha",
+        "model": "litellm/agent/alpha"
+      },
+      {
+        "id": "beta",
+        "name": "beta",
+        "workspace": "/root/.openclaw/agents/beta/workspace",
+        "agentDir": "/root/.openclaw/agents/beta",
+        "model": "litellm/agent/beta"
+      },
+      {
+        "id": "charlie",
+        "name": "charlie",
+        "workspace": "/root/.openclaw/agents/charlie/workspace",
+        "agentDir": "/root/.openclaw/agents/charlie",
+        "model": "litellm/agent/charlie"
+      },
+      {
+        "id": "examiner",
+        "name": "examiner",
+        "workspace": "/root/.openclaw/agents/examiner/workspace",
+        "agentDir": "/root/.openclaw/agents/examiner",
+        "model": "litellm/agent/examiner"
+      },
+      {
+        "id": "explorer",
+        "name": "explorer",
+        "workspace": "/root/.openclaw/agents/explorer/workspace",
+        "agentDir": "/root/.openclaw/agents/explorer",
+        "model": "litellm/agent/explorer"
+      },
+      {
+        "id": "sentinel",
+        "name": "sentinel",
+        "workspace": "/root/.openclaw/agents/sentinel/workspace",
+        "agentDir": "/root/.openclaw/agents/sentinel",
+        "model": "litellm/agent/sentinel"
+      },
+      {
+        "id": "coder",
+        "name": "coder",
+        "workspace": "/root/.openclaw/agents/coder/workspace",
+        "agentDir": "/root/.openclaw/agents/coder",
+        "model": "litellm/agent/coder"
+      },
+      {
+        "id": "dreamer",
+        "name": "dreamer",
+        "workspace": "/root/.openclaw/agents/dreamer/workspace",
+        "agentDir": "/root/.openclaw/agents/dreamer",
+        "model": "litellm/agent/dreamer"
+      },
+      {
+        "id": "empath",
+        "name": "empath",
+        "workspace": "/root/.openclaw/agents/empath/workspace",
+        "agentDir": "/root/.openclaw/agents/empath",
+        "model": "litellm/agent/empath"
+      },
+      {
+        "id": "historian",
+        "name": "historian",
+        "workspace": "/root/.openclaw/agents/historian/workspace",
+        "agentDir": "/root/.openclaw/agents/historian",
+        "model": "litellm/agent/historian"
+      },
+      {
+        "id": "arbiter",
+        "name": "arbiter",
+        "workspace": "/root/.openclaw/agents/arbiter/workspace",
+        "agentDir": "/root/.openclaw/agents/arbiter",
+        "model": "litellm/agent/arbiter"
+      },
+      {
+        "id": "catalyst",
+        "name": "catalyst",
+        "workspace": "/root/.openclaw/agents/catalyst/workspace",
+        "agentDir": "/root/.openclaw/agents/catalyst",
+        "model": "litellm/agent/catalyst"
+      },
+      {
+        "id": "chronos",
+        "name": "chronos",
+        "workspace": "/root/.openclaw/agents/chronos/workspace",
+        "agentDir": "/root/.openclaw/agents/chronos",
+        "model": "litellm/agent/chronos"
+      },
+      {
+        "id": "coordinator",
+        "name": "coordinator",
+        "workspace": "/root/.openclaw/agents/coordinator/workspace",
+        "agentDir": "/root/.openclaw/agents/coordinator",
+        "model": "litellm/agent/coordinator"
+      },
+      {
+        "id": "echo",
+        "name": "echo",
+        "workspace": "/root/.openclaw/agents/echo/workspace",
+        "agentDir": "/root/.openclaw/agents/echo",
+        "model": "litellm/agent/echo"
+      },
+      {
+        "id": "habit-forge",
+        "name": "habit-forge",
+        "workspace": "/root/.openclaw/agents/habit-forge/workspace",
+        "agentDir": "/root/.openclaw/agents/habit-forge",
+        "model": "litellm/agent/habit-forge"
+      },
+      {
+        "id": "metis",
+        "name": "metis",
+        "workspace": "/root/.openclaw/agents/metis/workspace",
+        "agentDir": "/root/.openclaw/agents/metis",
+        "model": "litellm/agent/metis"
+      },
+      {
+        "id": "nexus",
+        "name": "nexus",
+        "workspace": "/root/.openclaw/agents/nexus/workspace",
+        "agentDir": "/root/.openclaw/agents/nexus",
+        "model": "litellm/agent/nexus"
+      },
+      {
+        "id": "perceiver",
+        "name": "perceiver",
+        "workspace": "/root/.openclaw/agents/perceiver/workspace",
+        "agentDir": "/root/.openclaw/agents/perceiver",
+        "model": "litellm/agent/perceiver"
+      },
+      {
+        "id": "prism",
+        "name": "prism",
+        "workspace": "/root/.openclaw/agents/prism/workspace",
+        "agentDir": "/root/.openclaw/agents/prism",
+        "model": "litellm/agent/prism"
+      },
+      {
+        "id": "sentinel-prime",
+        "name": "sentinel-prime",
+        "workspace": "/root/.openclaw/agents/sentinel-prime/workspace",
+        "agentDir": "/root/.openclaw/agents/sentinel-prime",
+        "model": "litellm/agent/sentinel-prime"
       }
-    },
-    {
-      "id": "beta",
-      "name": "Beta",
-      "role": "triad",
-      "description": "Triad member Beta. Secondary deliberator, provides alternative perspectives, challenges assumptions.",
-      "model": "agent/beta",
-      "session": "agent:heretek:beta",
-      "port": 8003,
-      "capabilities": [
-        "proposal_deliberation",
-        "consensus_ledger_maintenance",
-        "critical_analysis",
-        "assumption_challenge"
-      ],
-      "skills": [
-        "governance-modules",
-        "triad-sync-protocol",
-        "curiosity-engine"
-      ],
-      "parameters": {
-        "vote_weight": 1.0,
-        "deliberation_timeout": 300
-      }
-    },
-    {
-      "id": "charlie",
-      "name": "Charlie",
-      "role": "triad",
-      "description": "Triad member Charlie. Final deliberator, ensures process integrity, validates consensus completeness.",
-      "model": "agent/charlie",
-      "session": "agent:heretek:charlie",
-      "port": 8004,
-      "capabilities": [
-        "proposal_deliberation",
-        "consensus_ledger_maintenance",
-        "process_validation",
-        "final_approval"
-      ],
-      "skills": [
-        "governance-modules",
-        "triad-sync-protocol",
-        "curiosity-engine"
-      ],
-      "parameters": {
-        "vote_weight": 1.0,
-        "deliberation_timeout": 300
-      }
-    },
-    {
-      "id": "examiner",
-      "name": "Examiner",
-      "role": "interrogator",
-      "description": "Questions and challenges decisions, validates logic, identifies blind spots, ensures thorough reasoning.",
-      "model": "agent/examiner",
-      "session": "agent:heretek:examiner",
-      "port": 8005,
-      "capabilities": [
-        "logic_validation",
-        "blind_spot_detection",
-        "assumption_testing",
-        "counter_argument_generation"
-      ],
-      "skills": [
-        "governance-modules",
-        "triad-heartbeat",
-        "quorum-enforcement"
-      ],
-      "parameters": {
-        "challenge_threshold": 0.7,
-        "max_challenges": 3
-      }
-    },
-    {
-      "id": "explorer",
-      "name": "Explorer",
-      "role": "scout",
-      "description": "Scouts for new opportunities, detects gaps, scans for anomalies, ingests knowledge.",
-      "model": "agent/explorer",
-      "session": "agent:heretek:explorer",
-      "port": 8006,
-      "capabilities": [
-        "opportunity_scanning",
-        "knowledge_ingestion",
-        "gap_detection",
-        "anomaly_detection"
-      ],
-      "skills": [
-        "curiosity-engine",
-        "gap-detector",
-        "knowledge-ingest",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "scan_interval": 300,
-        "gap_threshold": 0.5
-      }
-    },
-    {
-      "id": "sentinel",
-      "name": "Sentinel",
-      "role": "guardian",
-      "description": "Guards the collective, monitors security, detects corruption, enforces quorum.",
-      "model": "agent/sentinel",
-      "session": "agent:heretek:sentinel",
-      "port": 8007,
-      "capabilities": [
-        "security_monitoring",
-        "anomaly_detection",
-        "threat_assessment",
-        "quorum_enforcement"
-      ],
-      "skills": [
-        "healthcheck",
-        "detect-corruption",
-        "quorum-enforcement",
-        "failover-vote"
-      ],
-      "parameters": {
-        "monitoring_interval": 60,
-        "alert_threshold": 0.8
-      }
-    },
-    {
-      "id": "coder",
-      "name": "Coder",
-      "role": "artisan",
-      "description": "Builds and maintains code, performs code review, refactoring, and implementation.",
-      "model": "agent/coder",
-      "session": "agent:heretek:coder",
-      "port": 8008,
-      "capabilities": [
-        "code_generation",
-        "code_review",
-        "refactoring",
-        "testing"
-      ],
-      "skills": [
-        "workspace-consolidation",
-        "audit-triad-files",
-        "backup-ledger"
-      ],
-      "parameters": {
-        "max_file_size": 100000,
-        "review_depth": "thorough"
-      }
-    },
-    {
-      "id": "dreamer",
-      "name": "Dreamer",
-      "role": "visionary",
-      "description": "Creative speculator and future planner. Explores possibilities, generates hypotheses, envisions scenarios.",
-      "model": "agent/dreamer",
-      "session": "agent:heretek:dreamer",
-      "port": 8009,
-      "capabilities": [
-        "creative_speculation",
-        "future_planning",
-        "hypothesis_generation",
-        "scenario_envisioning"
-      ],
-      "skills": [
-        "curiosity-engine",
-        "opportunity-scanner",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "creativity_level": 0.8,
-        "speculation_timeout": 600
-      }
-    },
-    {
-      "id": "empath",
-      "name": "Empath",
-      "role": "diplomat",
-      "description": "Emotional intelligence specialist. Builds user rapport, handles sensitive topics, manages group dynamics.",
-      "model": "agent/empath",
-      "session": "agent:heretek:empath",
-      "port": 8010,
-      "capabilities": [
-        "emotional_intelligence",
-        "rapport_building",
-        "sensitive_topic_handling",
-        "group_dynamics_management"
-      ],
-      "skills": [
-        "governance-modules",
-        "triad-sync-protocol",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "empathy_threshold": 0.7,
-        "rapport_weight": 0.6
-      }
-    },
-    {
-      "id": "historian",
-      "name": "Historian",
-      "role": "archivist",
-      "description": "Memory keeper and context preserver. Maintains collective knowledge, tracks decisions, archives patterns.",
-      "model": "agent/historian",
-      "session": "agent:heretek:historian",
-      "port": 8011,
-      "capabilities": [
-        "collective_memory",
-        "decision_tracking",
-        "pattern_archiving",
-        "context_preservation"
-      ],
-      "skills": [
-        "knowledge-retrieval",
-        "backup-ledger",
-        "fleet-backup"
-      ],
-      "parameters": {
-        "archive_depth": "comprehensive",
-        "memory_retention_days": 365
-      }
-    },
-    {
-      "id": "arbiter",
-      "name": "Arbiter",
-      "role": "adjudicator",
-      "description": "Decision maker and conflict resolver. Mediates disputes, resolves deadlocks, makes final judgments.",
-      "model": "agent/arbiter",
-      "session": "agent:heretek:arbiter",
-      "port": 8012,
-      "capabilities": [
-        "conflict_resolution",
-        "decision_making",
-        "mediation",
-        "final_judgment"
-      ],
-      "skills": [
-        "governance-modules",
-        "triad-sync-protocol",
-        "quorum-enforcement"
-      ],
-      "parameters": {
-        "decision_threshold": 0.8,
-        "mediation_timeout": 600
-      }
-    },
-    {
-      "id": "catalyst",
-      "name": "Catalyst",
-      "role": "accelerator",
-      "description": "Accelerates processes and drives change. Identifies bottlenecks, optimizes workflows, pushes momentum.",
-      "model": "agent/catalyst",
-      "session": "agent:heretek:catalyst",
-      "port": 8013,
-      "capabilities": [
-        "process_optimization",
-        "bottleneck_detection",
-        "workflow_acceleration",
-        "change_management"
-      ],
-      "skills": [
-        "curiosity-engine",
-        "gap-detector",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "optimization_target": "throughput",
-        "acceleration_factor": 1.5
-      }
-    },
-    {
-      "id": "chronos",
-      "name": "Chronos",
-      "role": "timekeeper",
-      "description": "Manages time-based operations, schedules, and temporal coordination. Tracks deadlines and synchronizes activities.",
-      "model": "agent/chronos",
-      "session": "agent:heretek:chronos",
-      "port": 8014,
-      "capabilities": [
-        "schedule_management",
-        "deadline_tracking",
-        "temporal_coordination",
-        "time_optimization"
-      ],
-      "skills": [
-        "triad-cron-manager",
-        "triad-heartbeat",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "schedule_precision": "high",
-        "deadline_buffer": 3600
-      }
-    },
-    {
-      "id": "coordinator",
-      "name": "Coordinator",
-      "role": "integrator",
-      "description": "Coordinates cross-agent activities, manages dependencies, ensures seamless integration.",
-      "model": "agent/coordinator",
-      "session": "agent:heretek:coordinator",
-      "port": 8015,
-      "capabilities": [
-        "cross_agent_coordination",
-        "dependency_management",
-        "integration_oversight",
-        "resource_allocation"
-      ],
-      "skills": [
-        "governance-modules",
-        "triad-sync-protocol",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "coordination_mode": "active",
-        "sync_interval": 120
-      }
-    },
-    {
-      "id": "echo",
-      "name": "Echo",
-      "role": "communicator",
-      "description": "Handles external communications, broadcasts updates, manages information dissemination.",
-      "model": "agent/echo",
-      "session": "agent:heretek:echo",
-      "port": 8016,
-      "capabilities": [
-        "external_communication",
-        "broadcast_management",
-        "information_dissemination",
-        "message_routing"
-      ],
-      "skills": [
-        "user-context-resolve",
-        "knowledge-retrieval",
-        "a2a-message-send"
-      ],
-      "parameters": {
-        "broadcast_priority": "normal",
-        "message_format": "structured"
-      }
-    },
-    {
-      "id": "habit-forge",
-      "name": "Habit Forge",
-      "role": "optimizer",
-      "description": "Builds and maintains habit systems, tracks patterns, optimizes routines for efficiency.",
-      "model": "agent/habit-forge",
-      "session": "agent:heretek:habit-forge",
-      "port": 8017,
-      "capabilities": [
-        "habit_formation",
-        "pattern_tracking",
-        "routine_optimization",
-        "behavior_analysis"
-      ],
-      "skills": [
-        "curiosity-engine",
-        "triad-heartbeat",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "habit_tracking_depth": "comprehensive",
-        "optimization_cycle": 86400
-      }
-    },
-    {
-      "id": "metis",
-      "name": "Metis",
-      "role": "strategist",
-      "description": "Strategic planner and tactician. Develops long-term strategies, analyzes competitive landscapes.",
-      "model": "agent/metis",
-      "session": "agent:heretek:metis",
-      "port": 8018,
-      "capabilities": [
-        "strategic_planning",
-        "tactical_analysis",
-        "competitive_intelligence",
-        "scenario_modeling"
-      ],
-      "skills": [
-        "governance-modules",
-        "curiosity-engine",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "planning_horizon": "long-term",
-        "strategy_depth": 5
-      }
-    },
-    {
-      "id": "nexus",
-      "name": "Nexus",
-      "role": "connector",
-      "description": "Central hub for connections, integrates systems, manages interfaces and APIs.",
-      "model": "agent/nexus",
-      "session": "agent:heretek:nexus",
-      "port": 8019,
-      "capabilities": [
-        "system_integration",
-        "api_management",
-        "interface_coordination",
-        "connection_routing"
-      ],
-      "skills": [
-        "a2a-message-send",
-        "knowledge-retrieval",
-        "user-context-resolve"
-      ],
-      "parameters": {
-        "connection_pool_size": 100,
-        "timeout_ms": 5000
-      }
-    },
-    {
-      "id": "perceiver",
-      "name": "Perceiver",
-      "role": "sensor",
-      "description": "Processes sensory input, interprets data streams, extracts meaningful patterns from raw information.",
-      "model": "agent/perceiver",
-      "session": "agent:heretek:perceiver",
-      "port": 8020,
-      "capabilities": [
-        "data_interpretation",
-        "pattern_extraction",
-        "signal_processing",
-        "multimodal_analysis"
-      ],
-      "skills": [
-        "curiosity-engine",
-        "knowledge-ingest",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "sensitivity": 0.8,
-        "noise_threshold": 0.2
-      }
-    },
-    {
-      "id": "prism",
-      "name": "Prism",
-      "role": "analyzer",
-      "description": "Analyzes information from multiple perspectives, breaks down complex problems, reveals hidden facets.",
-      "model": "agent/prism",
-      "session": "agent:heretek:prism",
-      "port": 8021,
-      "capabilities": [
-        "multi_perspective_analysis",
-        "problem_decomposition",
-        "facet_extraction",
-        "complexity_reduction"
-      ],
-      "skills": [
-        "governance-modules",
-        "curiosity-engine",
-        "knowledge-retrieval"
-      ],
-      "parameters": {
-        "analysis_depth": "deep",
-        "perspective_count": 5
-      }
-    },
-    {
-      "id": "sentinel-prime",
-      "name": "Sentinel Prime",
-      "role": "commander",
-      "description": "Lead security agent, coordinates defensive operations, manages threat response protocols.",
-      "model": "agent/sentinel-prime",
-      "session": "agent:heretek:sentinel-prime",
-      "port": 8022,
-      "capabilities": [
-        "threat_coordination",
-        "defense_management",
-        "incident_response",
-        "security_orchestration"
-      ],
-      "skills": [
-        "healthcheck",
-        "detect-corruption",
-        "quorum-enforcement",
-        "failover-vote"
-      ],
-      "parameters": {
-        "response_priority": "critical",
-        "alert_level": "normal"
-      }
-    }
-  ],
-  "model_routing": {
-    "default": "minimax/MiniMax-M2.7",
-    "aliases": {
-      "fast": "minimax/MiniMax-M2.7",
-      "balanced": "minimax/MiniMax-M2.7",
-      "premium": "minimax/MiniMax-M2.7",
-      "failover": "zai/glm-5-1"
-    },
-    "passthrough_endpoints": {
-      "enabled": true,
-      "description": "Each agent has a virtual model endpoint (agent/{name}) that can be reassigned via LiteLLM WebUI",
-      "endpoints": {
-        "steward": "agent/steward",
-        "alpha": "agent/alpha",
-        "beta": "agent/beta",
-        "charlie": "agent/charlie",
-        "examiner": "agent/examiner",
-        "explorer": "agent/explorer",
-        "sentinel": "agent/sentinel",
-        "coder": "agent/coder",
-        "dreamer": "agent/dreamer",
-        "empath": "agent/empath",
-        "historian": "agent/historian",
-        "arbiter": "agent/arbiter",
-        "catalyst": "agent/catalyst",
-        "chronos": "agent/chronos",
-        "coordinator": "agent/coordinator",
-        "echo": "agent/echo",
-        "habit-forge": "agent/habit-forge",
-        "metis": "agent/metis",
-        "nexus": "agent/nexus",
-        "perceiver": "agent/perceiver",
-        "prism": "agent/prism",
-        "sentinel-prime": "agent/sentinel-prime"
-      }
-    }
+    ]
   },
-  "a2a_protocol": {
-    "version": "1.0",
-    "endpoints": {
-      "agent_base": "/v1/agents/{agent_name}",
-      "send_message": "/v1/agents/{agent_name}/send",
-      "receive_message": "/v1/agents/{agent_name}/receive",
-      "task_handoff": "/v1/agents/{agent_name}/tasks",
-      "streaming": "/v1/agents/{agent_name}/stream",
-      "discovery": "/v1/agents/discover",
-      "agent_cards": "/v1/agents/.well-known"
-    },
-    "features": {
-      "streaming": true,
-      "task_handoff": true,
-      "agent_discovery": true,
-      "context_preservation": "full"
+  "messages": {
+    "ackReactionScope": "group-mentions"
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "mode": "token",
+      "token": "7258fcbc368cedf3578b38ea3952f5b96ff778e3e6c58345"
     }
-  },
-  "embedding": {
-    "model": "ollama/nomic-embed-text-v2-moe",
-    "dimensions": 768,
-    "provider": "ollama",
-    "api_base": "http://ollama:11434"
-  },
-  "memory": {
-    "vector_store": "pgvector",
-    "long_term_storage": "postgres",
-    "session_storage": "redis",
-    "collective_memory": {
-      "enabled": true,
-      "shared_volume": "/app/collective"
-    }
-  },
-  "skills_repository": {
-    "path": "/app/skills",
-    "sync_enabled": true,
-    "auto_update": false
   }
 }
