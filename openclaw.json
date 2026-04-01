@@ -661,6 +661,9 @@
   "approvals": {
     "exec": {
       "mode": "disabled"
+    },
+    "plugin": {
+      "enabled": false
     }
   }
 }
