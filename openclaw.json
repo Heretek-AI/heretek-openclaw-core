@@ -658,5 +658,10 @@
       "mode": "token",
       "token": "7258fcbc368cedf3578b38ea3952f5b96ff778e3e6c58345"
     }
+  },
+  "approvals": {
+    "exec": {
+      "mode": "disabled"
+    }
   }
 }
