@@ -1,0 +1,344 @@
+---
+# Agent Lifecycle and Steward Primary Patch
+# Heretek OpenClaw Core - Phase 1 Bug Fixes
+# Date: 2026-04-01
+#
+# This patch fixes agent lifecycle issues:
+# - Steward wasn't the primary agent (main was incorrectly listed first)
+# - Agents weren't coming online (no auto-registration/heartbeat)
+# - No visibility on agent status (added /agent-status endpoint)
+---
+
+diff --git a/openclaw.json b/openclaw.json
+index upstream..heretek 100644
+--- a/openclaw.json
++++ b/openclaw.json
+@@ -486,14 +486,10 @@
+     "agents": {
+         "list": [
+             {
+-                "id": "main"
+-            },
+-            {
+                 "id": "steward",
+                 "name": "steward",
+                 "workspace": "/root/.openclaw/agents/steward/workspace",
+                 "agentDir": "/root/.openclaw/agents/steward",
+                 "model": "litellm/agent/steward",
++                "role": "orchestrator",
++                "primary": true
+             },
+diff --git a/agents/lib/agent-client.js b/agents/lib/agent-client.js
+index upstream..heretek 100644
+--- a/agents/lib/agent-client.js
++++ b/agents/lib/agent-client.js
+@@ -37,6 +37,7 @@ const WebSocket = require('ws');
+  * Implements WebSocket RPC communication with OpenClaw Gateway.
+  * All A2A messages are routed through the Gateway on port 18789.
+  */
+ class GatewayClient {
+     constructor(config) {
+         this.agentId = config.agentId || 'unknown';
+@@ -51,6 +52,11 @@ class GatewayClient {
+         this.messageHandlers = new Map();
+         this.pendingResponses = new Map();
+         this.messageCounter = 0;
++        
++        // Heartbeat configuration
++        this.heartbeatInterval = config.heartbeatInterval || 30000;
++        this.heartbeatTimer = null;
++        this.lastHeartbeatSent = null;
++        this.lastHeartbeatReceived = null;
+     }
+ 
+     async connect(options = {}) {
+@@ -58,10 +64,15 @@ class GatewayClient {
+             return true;
+         }
+ 
+-        const { enableHeartbeat = true, role = null, metadata = {} } = options;
++        const { enableHeartbeat = true, role = this.role, metadata = {} } = options;
+ 
+         return new Promise((resolve, reject) => {
+             try {
+                 this.ws = new WebSocket(this.gatewayUrl);
+ 
+                 this.ws.on('open', async () => {
+                     console.log(`[GatewayClient] Connected to Gateway at ${this.gatewayUrl}`);
+                     this.connected = true;
++                    
++                    // Register agent with gateway
++                    await this._registerAgent(role, metadata);
++                    
++                    // Start heartbeat if enabled
++                    if (enableHeartbeat) {
++                        this._startHeartbeat();
++                    }
++                    
+                     resolve(true);
+                 });
+@@ -125,6 +136,50 @@ class GatewayClient {
+         });
+     }
+ 
++    /**
++     * Register agent with the Gateway
++     * @private
++     */
++    async _registerAgent(role, metadata) {
++        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
++            return;
++        }
++
++        const registrationMessage = {
++            type: 'register',
++            agentId: this.agentId,
++            timestamp: new Date().toISOString(),
++            metadata: {
++                role: role || 'general',
++                ...metadata
++            }
++        };
++
++        this.ws.send(JSON.stringify(registrationMessage));
++        console.log(`[GatewayClient] Registered agent ${this.agentId} with role ${role || 'general'}`);
++    }
++
++    /**
++     * Start automatic heartbeat to Gateway
++     * @private
++     */
++    _startHeartbeat() {
++        if (this.heartbeatTimer) {
++            this._stopHeartbeat();
++        }
++
++        console.log(`[GatewayClient] Starting heartbeat every ${this.heartbeatInterval}ms`);
++        
++        this._sendHeartbeat();
++        this.heartbeatTimer = setInterval(() => {
++            this._sendHeartbeat();
++        }, this.heartbeatInterval);
++    }
++
++    _stopHeartbeat() {
++        if (this.heartbeatTimer) {
++            clearInterval(this.heartbeatTimer);
++            this.heartbeatTimer = null;
++        }
++    }
++
++    _sendHeartbeat() {
++        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
++            return;
++        }
++
++        const heartbeatMessage = {
++            type: 'ping',
++            agentId: this.agentId,
++            timestamp: new Date().toISOString(),
++            heartbeat: {
++                uptime: process.uptime(),
++                memoryUsage: process.memoryUsage(),
++                lastHeartbeatSent: this.lastHeartbeatSent
++            }
++        };
++
++        this.ws.send(JSON.stringify(heartbeatMessage));
++        this.lastHeartbeatSent = new Date().toISOString();
++    }
++
+     _handleMessage(data) {
+         try {
+             const message = JSON.parse(data.toString());
+@@ -200,6 +255,25 @@ class GatewayClient {
+         });
+     }
+ 
++    getHeartbeatStatus() {
++        return {
++            agentId: this.agentId,
++            connected: this.connected,
++            lastHeartbeatSent: this.lastHeartbeatSent,
++            lastHeartbeatReceived: this.lastHeartbeatReceived,
++            heartbeatInterval: this.heartbeatInterval,
++            heartbeatActive: this.heartbeatTimer !== null,
++            uptime: process.uptime()
++        };
++    }
++
++    getHealth() {
++        const now = new Date().toISOString();
++        const heartbeatStatus = this.getHeartbeatStatus();
++        
++        return {
++            agentId: this.agentId,
++            status: this.connected ? 'online' : 'offline',
++            timestamp: now,
++            heartbeat: heartbeatStatus,
++            memory: process.memoryUsage(),
++            uptime: process.uptime()
++        };
++    }
++
+     async disconnect() {
+         if (this.ws) {
++            this._stopHeartbeat();
+             this.ws.close();
+             this.ws = null;
+             this.connected = false;
+@@ -220,6 +294,7 @@ class AgentClient {
+      * @param {string} config.gatewayUrl - OpenClaw Gateway WebSocket URL
+      * @param {string} [config.skillsPath] - Path to skills directory
+      * @param {string} [config.model] - Model to use (defaults to agent/{agentId})
+      */
+     constructor(config) {
+         this.agentId = config.agentId || process.env.AGENT_NAME || 'unknown';
+@@ -350,7 +425,7 @@ class AgentClient {
+      * @param {Object} options - Connection options
+      * @param {boolean} [options.enableHeartbeat=true] - Enable automatic heartbeat
+      * @param {string} [options.role] - Agent role for registration
+      * @param {Object} [options.metadata] - Additional metadata for registration
+      * @returns {Promise<boolean>} Connection status
+      */
+     async connect(options = {}) {
+-        return this.gatewayClient.connect(options);
++        const { enableHeartbeat = true, role = this.role, metadata = {} } = options;
++        return this.gatewayClient.connect({ enableHeartbeat, role, metadata });
+     }
+ 
+     async disconnect() {
+diff --git a/gateway/openclaw-gateway.js b/gateway/openclaw-gateway.js
+index upstream..heretek 100644
+--- a/gateway/openclaw-gateway.js
++++ b/gateway/openclaw-gateway.js
+@@ -670,6 +670,120 @@ class OpenClawGateway extends EventEmitter {
+         res.end(JSON.stringify({ error: 'Not found' }));
+     }
+ 
++    /**
++     * Handle agent status HTTP requests
++     * @private
++     */
++    async _handleAgentStatusHttp(req, res, url) {
++        const pathParts = url.pathname.split('/');
++        const specificAgentId = pathParts[pathParts.length - 1];
++        
++        // GET /agent-status - all agents with status
++        if (url.pathname === '/agent-status') {
++            const agentStatus = [];
++            
++            for (const [agentId, agent] of this.agents) {
++                const now = Date.now();
++                const lastSeenTime = new Date(agent.lastSeen).getTime();
++                const timeSinceLastSeen = now - lastSeenTime;
++                
++                // Consider agent offline if no heartbeat for more than 60 seconds
++                const isOnline = agent.ws && agent.ws.readyState === WebSocket.OPEN && timeSinceLastSeen < (this.config.heartbeatInterval * 2);
++                
++                agentStatus.push({
++                    agentId,
++                    status: isOnline ? 'online' : 'offline',
++                    lastSeen: agent.lastSeen,
++                    registeredAt: agent.registeredAt,
++                    metadata: agent.metadata,
++                    websocketReadyState: agent.ws ? agent.ws.readyState : null,
++                    timeSinceLastSeenMs: timeSinceLastSeen
++                });
++            }
++            
++            res.writeHead(200, { 'Content-Type': 'application/json' });
++            res.end(JSON.stringify({
++                timestamp: new Date().toISOString(),
++                totalAgents: agentStatus.length,
++                onlineCount: agentStatus.filter(a => a.status === 'online').length,
++                offlineCount: agentStatus.filter(a => a.status === 'offline').length,
++                agents: agentStatus
++            }));
++            return;
++        }
++        
++        // GET /agent-status/{agentId} - specific agent status
++        if (specificAgentId && specificAgentId !== 'agent-status') {
++            const agent = this.agents.get(specificAgentId);
++            
++            if (!agent) {
++                res.writeHead(404, { 'Content-Type': 'application/json' });
++                res.end(JSON.stringify({ error: `Agent ${specificAgentId} not found` }));
++                return;
++            }
++            
++            const now = Date.now();
++            const lastSeenTime = new Date(agent.lastSeen).getTime();
++            const timeSinceLastSeen = now - lastSeenTime;
++            const isOnline = agent.ws && agent.ws.readyState === WebSocket.OPEN && timeSinceLastSeen < (this.config.heartbeatInterval * 2);
++            
++            res.writeHead(200, { 'Content-Type': 'application/json' });
++            res.end(JSON.stringify({
++                agentId: specificAgentId,
++                status: isOnline ? 'online' : 'offline',
++                lastSeen: agent.lastSeen,
++                registeredAt: agent.registeredAt,
++                metadata: agent.metadata,
++                websocketReadyState: agent.ws ? agent.ws.readyState : null,
++                timeSinceLastSeenMs: timeSinceLastSeen
++            }));
++            return;
++        }
++    }
++
+     _handleHttpRequest(req, res) {
+         const url = new URL(req.url, `http://${req.headers.host}`);
+         
+@@ -685,6 +799,13 @@ class OpenClawGateway extends EventEmitter {
+             return;
+         }
+ 
++        // Agent status endpoint
++        if (url.pathname === '/agent-status' || url.pathname.startsWith('/agent-status/')) {
++            this._handleAgentStatusHttp(req, res, url);
++            return;
++        }
++
+         // 404 for other paths
+         res.writeHead(404, { 'Content-Type': 'application/json' });
+         res.end(JSON.stringify({ error: 'Not found' }));
+@@ -580,6 +700,25 @@ class OpenClawGateway extends EventEmitter {
+         });
+     }
+ 
++    /**
++     * Handle ping (heartbeat from agent)
++     * @private
++     */
++    _handlePing(ws, agentId, message) {
++        ws.send(JSON.stringify({
++            type: 'pong',
++            timestamp: Date.now(),
++            agentId,
++            heartbeat: {
++                received: new Date().toISOString(),
++                agentHeartbeat: message.heartbeat || {}
++            }
++        }));
++
++        if (agentId && this.agents.has(agentId)) {
++            this.agents.get(agentId).lastSeen = new Date().toISOString();
++        }
++    }
++
+     _handleMessage(ws, agentId, data) {
+         try {
+             const message = JSON.parse(data.toString());
+@@ -610,6 +749,10 @@ class OpenClawGateway extends EventEmitter {
+                 case 'pong':
+                     this._handlePong(ws, agentId, message);
+                     break;
++
++                case 'ping':
++                    this._handlePing(ws, agentId, message);
++                    break;
++
+                 case 'discover':
+                     await this._handleDiscover(ws, agentId);
+                     break;

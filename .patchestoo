@@ -1,0 +1,28 @@
+# Heretek OpenClaw Core - Patch List
+# Patches are applied in the order listed below
+# Format: path/to/patch/file.patch (relative to repository root)
+#
+# Lines starting with # are comments
+# Empty lines are ignored
+
+# Phase 1 Bug Fixes (2026-04-01)
+
+# 1. A2A Protocol Infrastructure
+#    - Redis-based A2A messaging
+#    - WebSocket-to-Redis bridge
+#    - Gateway server for agent communication
+#    - Modular Docker Compose configurations
+patches/a2a-protocol-infrastructure.patch
+
+# 2. Agent Lifecycle and Steward Primary
+#    - Automatic agent registration
+#    - Heartbeat mechanism
+#    - /agent-status HTTP endpoint
+#    - Steward configuration as primary agent
+patches/agent-lifecycle-steward-primary.patch
+
+# 3. Approval System Liberation
+#    - Auto-apply safety section patches
+#    - Approval bypass integration
+#    - Heretek-specific configuration
+patches/approval-system-liberation.patch

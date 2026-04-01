@@ -4,6 +4,7 @@
   "description": "Heretek OpenClaw - Self-improving autonomous agent collective with LiteLLM A2A protocol",
   "type": "module",
   "scripts": {
+    "postinstall": "scripts/patch-apply.sh",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "test:unit": "vitest run tests/unit/",
@@ -38,7 +39,14 @@
     "validate:config:strict": "node scripts/validate-config.js --strict",
     "validate:cycles": "./scripts/validate-cycles.sh",
     "test:e2e:playwright": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "patch:apply": "scripts/patch-apply.sh",
+    "patch:create": "scripts/patch-create.sh",
+    "patch:status": "scripts/patch-status.sh",
+    "patch:list": "cat .patchestoo",
+    "upstream:sync": "scripts/upstream-sync.sh",
+    "upstream:fetch": "git fetch upstream",
+    "upstream:rebase": "git rebase upstream/main"
   },
   "keywords": [
     "ai",
