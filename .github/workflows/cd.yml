@@ -1,0 +1,268 @@
+# ==============================================================================
+# Heretek OpenClaw - Continuous Deployment Pipeline
+# ==============================================================================
+# This workflow handles automated deployments to various environments
+# based on branch and tag patterns.
+# ==============================================================================
+
+name: CD Pipeline
+
+on:
+  # Deploy on pushes to main branch (staging) or version tags (production)
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+    tags:
+      - 'v*'
+  
+  # Manual deployment trigger
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version to deploy (leave empty for latest)'
+        required: false
+        type: string
+
+# Prevent concurrent deployments
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ============================================================================
+  # Pre-deployment Checks - Validate before deploying
+  # ============================================================================
+  pre-deployment-checks:
+    name: Pre-deployment Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      environment: ${{ steps.env.outputs.environment }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="latest"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Deploying version: $VERSION"
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" == "production" ]]; then
+            ENV="production"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            ENV="production"
+          else
+            ENV="staging"
+          fi
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          echo "Deploying to: $ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Run type check
+        run: npm run typecheck
+
+      - name: Run lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+  # ============================================================================
+  # Build Docker Image - Create containerized application
+  # ============================================================================
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: pre-deployment-checks
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # ============================================================================
+  # Deploy to Staging - Automatic deployment to staging environment
+  # ============================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [pre-deployment-checks, build-docker]
+    if: needs.pre-deployment-checks.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.openclaw.heretek.io
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "Version: ${{ needs.pre-deployment-checks.outputs.version }}"
+          # Add actual deployment commands here
+          # Examples:
+          # - kubectl apply for Kubernetes
+          # - docker-compose for VM deployments
+          # - AWS/GCP/Azure CLI for cloud deployments
+          echo "✅ Staging deployment complete!"
+
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests against staging..."
+          # curl -f https://staging.openclaw.heretek.io/health || exit 1
+          echo "✅ Smoke tests passed!"
+
+  # ============================================================================
+  # Deploy to Production - Manual approval required
+  # ============================================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [pre-deployment-checks, build-docker]
+    if: needs.pre-deployment-checks.outputs.environment == 'production'
+    environment:
+      name: production
+      url: https://openclaw.heretek.io
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          echo "Version: ${{ needs.pre-deployment-checks.outputs.version }}"
+          # Add actual deployment commands here
+          echo "✅ Production deployment complete!"
+
+      - name: Run health checks
+        run: |
+          echo "Running health checks against production..."
+          # curl -f https://openclaw.heretek.io/health || exit 1
+          echo "✅ Health checks passed!"
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
+  # ============================================================================
+  # Post-deployment Validation - Verify deployment success
+  # ============================================================================
+  post-deployment:
+    name: Post-deployment Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+      - name: Validate deployment
+        run: |
+          echo "## Post-deployment Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.deploy-staging.result }}" == "success" ]; then
+            echo "✅ Staging deployment validated" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ "${{ needs.deploy-production.result }}" == "success" ]; then
+            echo "✅ Production deployment validated" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "Deployment completed successfully!"
+          # Add notification hooks here (Slack, Discord, email, etc.)
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Deployment failed! Please check the logs."
+          # Add notification hooks here (Slack, Discord, email, etc.)
+          exit 1

@@ -1,0 +1,112 @@
+# ==============================================================================
+# Heretek OpenClaw - CODEOWNERS
+# ==============================================================================
+# This file defines code owners for different parts of the repository.
+# Code owners are automatically requested for review when changes are made.
+# Format: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Global Owners
+# ------------------------------------------------------------------------------
+# These owners will be requested for review on all pull requests
+* @heretek/core-team
+
+# ------------------------------------------------------------------------------
+# Core Infrastructure
+# ------------------------------------------------------------------------------
+# Gateway and RPC
+gateway/ @heretek/gateway-team @heretek/core-team
+
+# Agent coordination
+agents/ @heretek/agents-team @heretek/core-team
+
+# A2A messaging and Redis
+**/a2a-*.js @heretek/messaging-team @heretek/core-team
+**/redis-*.js @heretek/messaging-team @heretek/core-team
+
+# ------------------------------------------------------------------------------
+# Testing Infrastructure
+# ------------------------------------------------------------------------------
+# All test files
+tests/ @heretek/qa-team @heretek/core-team
+
+# CI/CD workflows
+.github/workflows/ @heretek/devops-team @heretek/core-team
+
+# Docker configurations
+Dockerfile* @heretek/devops-team
+docker-compose*.yml @heretek/devops-team
+
+# Test scripts
+scripts/run-tests*.sh @heretek/qa-team
+scripts/generate-coverage*.sh @heretek/qa-team
+
+# ------------------------------------------------------------------------------
+# Documentation
+# ------------------------------------------------------------------------------
+# README and contributing docs
+README.md @heretek/core-team
+CONTRIBUTING.md @heretek/core-team
+CODEOWNERS @heretek/core-team
+
+# Architecture documentation
+docs/ @heretek/architecture-team
+
+# API documentation
+**/api/ @heretek/api-team
+
+# ------------------------------------------------------------------------------
+# Patches
+# ------------------------------------------------------------------------------
+# Patch files
+patches/ @heretek/patch-team @heretek/core-team
+.patchestoo @heretek/patch-team
+
+# Patch scripts
+scripts/patch-*.sh @heretek/patch-team
+
+# ------------------------------------------------------------------------------
+# Configuration Files
+# ------------------------------------------------------------------------------
+# Package configuration
+package.json @heretek/core-team
+tsconfig*.json @heretek/core-team
+vitest.config.ts @heretek/qa-team
+
+# Environment and secrets
+.env* @heretek/devops-team
+*.example @heretek/devops-team
+
+# ------------------------------------------------------------------------------
+# Skills and Plugins
+# ------------------------------------------------------------------------------
+skills/ @heretek/skills-team
+plugins/ @heretek/plugins-team
+
+# ------------------------------------------------------------------------------
+# Dashboard and UI
+# ------------------------------------------------------------------------------
+**/dashboard/ @heretek/frontend-team
+**/frontend/ @heretek/frontend-team
+**/*.tsx @heretek/frontend-team
+**/*.svelte @heretek/frontend-team
+
+# ------------------------------------------------------------------------------
+# Monitoring and Observability
+# ------------------------------------------------------------------------------
+monitoring/ @heretek/devops-team
+**/metrics* @heretek/devops-team
+**/prometheus* @heretek/devops-team
+**/grafana* @heretek/devops-team
+
+# ------------------------------------------------------------------------------
+# Notes:
+# ------------------------------------------------------------------------------
+# - Code owners are automatically requested for review when a PR is created
+# - Multiple owners can be specified per path (space-separated)
+# - Use @team-name for team-based ownership
+# - Use @username for individual ownership
+# - Paths support glob patterns (*, **, ?)
+# - More specific paths take precedence over general paths
+# ==============================================================================

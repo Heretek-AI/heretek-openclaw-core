@@ -1,0 +1,261 @@
+# ==============================================================================
+# Heretek OpenClaw - Patch Validation Pipeline
+# ==============================================================================
+# This workflow validates patches when syncing with upstream repository.
+# It ensures patches apply cleanly and don't break existing functionality.
+# ==============================================================================
+
+name: Patch Validation
+
+on:
+  # Run on upstream sync workflow dispatch
+  workflow_dispatch:
+    inputs:
+      upstream_branch:
+        description: 'Upstream branch to sync with'
+        required: false
+        default: 'main'
+        type: string
+      validate_patches:
+        description: 'Validate all patches'
+        required: false
+        default: true
+        type: boolean
+  
+  # Run when upstream-sync.sh is modified
+  push:
+    branches: [main, develop]
+    paths:
+      - 'scripts/upstream-sync.sh'
+      - 'patches/**'
+      - '.patchestoo'
+
+env:
+  NODE_VERSION: '20'
+  UPSTREAM_REPO: 'https://github.com/heretek/heretek-openclaw-core.git'
+
+jobs:
+  # ============================================================================
+  # Fetch Upstream - Get latest upstream changes
+  # ============================================================================
+  fetch-upstream:
+    name: Fetch Upstream
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      upstream_sha: ${{ steps.fetch.outputs.upstream_sha }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        id: fetch
+        run: |
+          git remote add upstream ${{ env.UPSTREAM_REPO }} || true
+          git fetch upstream
+          UPSTREAM_SHA=$(git rev-parse upstream/${{ inputs.upstream_branch || 'main' }})
+          echo "upstream_sha=$UPSTREAM_SHA" >> $GITHUB_OUTPUT
+          echo "Fetched upstream ${{ inputs.upstream_branch || 'main' }} at $UPSTREAM_SHA"
+
+  # ============================================================================
+  # Validate Patches - Check if patches apply cleanly
+  # ============================================================================
+  validate-patches:
+    name: Validate Patches
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: fetch-upstream
+    if: inputs.validate_patches != 'false'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Create backup branch
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git checkout -b patch-validation-backup
+
+      - name: List patches to validate
+        id: list
+        run: |
+          PATCHES=$(cat .patchestoo 2>/dev/null | grep -v '^#' | grep -v '^$' || echo "")
+          echo "patches=$PATCHES" >> $GITHUB_OUTPUT
+          echo "Patches to validate:"
+          echo "$PATCHES"
+
+      - name: Validate each patch
+        id: validate
+        run: |
+          VALIDATION_RESULTS=""
+          FAILED_PATCHES=""
+          
+          while IFS= read -r patch; do
+            if [ -z "$patch" ] || [[ "$patch" == \#* ]]; then
+              continue
+            fi
+            
+            echo "Validating patch: $patch"
+            
+            # Check if patch file exists
+            if [ ! -f "patches/$patch" ]; then
+              echo "❌ Patch file not found: patches/$patch"
+              FAILED_PATCHES="$FAILED_PATCHES $patch"
+              VALIDATION_RESULTS="$VALIDATION_RESULTS\n❌ $patch: File not found"
+              continue
+            fi
+            
+            # Try to apply patch in dry-run mode
+            if git apply --check "patches/$patch" 2>/dev/null; then
+              echo "✅ Patch applies cleanly: $patch"
+              VALIDATION_RESULTS="$VALIDATION_RESULTS\n✅ $patch: Applies cleanly"
+            else
+              echo "❌ Patch has conflicts: $patch"
+              FAILED_PATCHES="$FAILED_PATCHES $patch"
+              VALIDATION_RESULTS="$VALIDATION_RESULTS\n❌ $patch: Has conflicts"
+            fi
+          done < <(cat .patchestoo 2>/dev/null | grep -v '^#' | grep -v '^$')
+          
+          echo "validation_results<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$VALIDATION_RESULTS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          if [ -n "$FAILED_PATCHES" ]; then
+            echo "failed_patches=$FAILED_PATCHES" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Upload validation results
+        if: always()
+        run: |
+          echo "## Patch Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.validate.outputs.validation_results }}" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Test Patch Application - Apply patches and run tests
+  # ============================================================================
+  test-patch-application:
+    name: Test Patch Application
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [fetch-upstream, validate-patches]
+    if: always() && needs.validate-patches.result == 'success'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Configure git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+      - name: Apply all patches
+        id: apply
+        run: |
+          ./scripts/patch-apply.sh
+          echo "Patches applied successfully"
+
+      - name: Run tests with patches applied
+        run: npm run test:unit
+        env:
+          CI: true
+
+      - name: Run integration tests
+        run: npm run test:integration
+        env:
+          REDIS_URL: 'redis://localhost:6379'
+          CI: true
+
+      - name: Cleanup - restore original state
+        if: always()
+        run: |
+          git reset --hard HEAD
+          git clean -fd
+
+  # ============================================================================
+  # Report - Generate validation report
+  # ============================================================================
+  report:
+    name: Generate Report
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [validate-patches, test-patch-application]
+    if: always()
+    
+    steps:
+      - name: Generate validation report
+        run: |
+          echo "## Patch Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Validate Patches | ${{ needs.validate-patches.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Patch Application | ${{ needs.test-patch-application.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.validate-patches.result }}" == "success" ] && \
+             [ "${{ needs.test-patch-application.result }}" == "success" ]; then
+            echo "✅ All patch validations passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some patch validations failed!" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Create artifact with report
+        if: always()
+        run: |
+          mkdir -p ./reports
+          cat > ./reports/patch-validation-report.md << 'EOF'
+          # Patch Validation Report
+          
+          Generated: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          ## Summary
+          
+          | Check | Status |
+          |-------|--------|
+          | Validate Patches | ${{ needs.validate-patches.result }} |
+          | Test Patch Application | ${{ needs.test-patch-application.result }} |
+          
+          ## Details
+          
+          See workflow logs for detailed information.
+          EOF
+          
+          echo "Report generated at ./reports/patch-validation-report.md"
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: patch-validation-report
+          path: ./reports/
+          retention-days: 30

@@ -1,0 +1,216 @@
+# ==============================================================================
+# Heretek OpenClaw - Docker Compose Test Environment
+# ==============================================================================
+# This file defines the test environment with all required services
+# for running integration and E2E tests.
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # ============================================================================
+  # Redis - Message broker and cache
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: openclaw-test-redis
+    ports:
+      - "${TEST_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_test_data:/data
+    command: redis-server --appendonly yes --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - openclaw-test-network
+    profiles:
+      - all
+      - redis
+
+  # ============================================================================
+  # Redis Commander - Redis web UI (optional)
+  # ============================================================================
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: openclaw-test-redis-commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+      - HTTP_USER=admin
+      - HTTP_PASSWORD=admin
+    ports:
+      - "${TEST_REDIS_COMMANDER_PORT:-8081}:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - openclaw-test-network
+    profiles:
+      - all
+      - tools
+
+  # ============================================================================
+  # PostgreSQL - Database for persistence (optional for some tests)
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: openclaw-test-postgres
+    environment:
+      POSTGRES_USER: ${TEST_POSTGRES_USER:-openclaw}
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_PASSWORD:-openclaw_test}
+      POSTGRES_DB: ${TEST_POSTGRES_DB:-openclaw_test}
+    ports:
+      - "${TEST_POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+      - ./scripts/test-db-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TEST_POSTGRES_USER:-openclaw}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - openclaw-test-network
+    profiles:
+      - all
+      - postgres
+
+  # ============================================================================
+  # Test Runner - Containerized test execution
+  # ============================================================================
+  test-runner:
+    build:
+      context: .
+      dockerfile: tests/Dockerfile
+    container_name: openclaw-test-runner
+    environment:
+      - NODE_ENV=test
+      - CI=true
+      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://${TEST_POSTGRES_USER:-openclaw}:${TEST_POSTGRES_PASSWORD:-openclaw_test}@postgres:5432/${TEST_POSTGRES_DB:-openclaw_test}
+      - GATEWAY_PORT=8787
+      - PLAYWRIGHT_TEST_BASE_URL=http://gateway:8787
+    volumes:
+      - ./test-results:/app/test-results
+      - ./coverage:/app/coverage
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - openclaw-test-network
+    profiles:
+      - all
+      - test
+
+  # ============================================================================
+  # Gateway Test Instance - For E2E testing
+  # ============================================================================
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openclaw-test-gateway
+    environment:
+      - NODE_ENV=test
+      - REDIS_URL=redis://redis:6379
+      - PORT=8787
+      - LOG_LEVEL=debug
+    ports:
+      - "${TEST_GATEWAY_PORT:-8787}:8787"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - openclaw-test-network
+    profiles:
+      - all
+      - e2e
+      - gateway
+
+  # ============================================================================
+  # Mock Services - For isolated testing
+  # ============================================================================
+  mock-llm:
+    image: curlimages/curl:latest
+    container_name: openclaw-test-mock-llm
+    command: |
+      sh -c 'while true; do echo "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n{\"model\":\"mock\",\"response\":\"ok\"}" | nc -l -p 8080; done'
+    ports:
+      - "${TEST_MOCK_LLM_PORT:-9000}:8080"
+    networks:
+      - openclaw-test-network
+    profiles:
+      - all
+      - mock
+
+  # ============================================================================
+  # Metrics Collector - For performance testing
+  # ============================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: openclaw-test-prometheus
+    volumes:
+      - ./tests/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_test_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    ports:
+      - "${TEST_PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - openclaw-test-network
+    profiles:
+      - all
+      - metrics
+
+  # ============================================================================
+  # Grafana - Metrics visualization (optional)
+  # ============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: openclaw-test-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-piechart-panel
+    ports:
+      - "${TEST_GRAFANA_PORT:-3100}:3000"
+    volumes:
+      - grafana_test_data:/var/lib/grafana
+      - ./tests/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks:
+      - openclaw-test-network
+    profiles:
+      - all
+      - metrics
+
+# ==============================================================================
+# Networks
+# ==============================================================================
+networks:
+  openclaw-test-network:
+    driver: bridge
+    name: openclaw-test-network
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+  redis_test_data:
+    driver: local
+  postgres_test_data:
+    driver: local
+  prometheus_test_data:
+    driver: local
+  grafana_test_data:
+    driver: local
