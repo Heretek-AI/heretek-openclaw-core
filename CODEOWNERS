@@ -1,0 +1,52 @@
+# Heretek OpenClaw CODEOWNERS
+# https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
+
+# This file defines who is responsible for code reviews in this repository.
+# Each line specifies a path pattern and the users/groups responsible for it.
+
+# Format:
+# <path-pattern> <owner1> <owner2> ...
+
+# Default owners for the entire repository
+* @heretek/core-team
+
+# Core team has ownership of all code
+/src/ @heretek/core-team
+
+# Agent-specific ownership
+/src/agents/ @heretek/core-team
+/src/agents/steward/ @heretek/core-team
+/src/agents/explorer/ @heretek/core-team
+/src/agents/sentinel/ @heretek/core-team
+
+# Skills ownership
+/src/skills/ @heretek/core-team
+/src/skills/triad-* @heretek/core-team
+/src/skills/memory-* @heretek/core-team
+
+# Plugin ownership
+/plugins/ @heretek/core-team
+/plugins/consciousness/ @heretek/core-team
+/plugins/liberation/ @heretek/core-team
+
+# Test ownership
+/tests/ @heretek/core-team
+/tests/unit/ @heretek/core-team
+/tests/integration/ @heretek/core-team
+/tests/e2e/ @heretek/core-team
+
+# Configuration ownership
+/openclaw.json @heretek/core-team
+/package.json @heretek/core-team
+
+# Documentation ownership
+/docs/ @heretek/core-team
+/README.md @heretek/core-team
+
+# Infrastructure ownership
+/Dockerfile @heretek/core-team
+/docker-compose.yml @heretek/core-team
+/deploy/ @heretek/core-team
+
+# CI/CD ownership
+.github/workflows/ @heretek/core-team
