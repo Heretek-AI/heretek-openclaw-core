@@ -1,7 +1,7 @@
 # Heretek OpenClaw - Deployment Status
 
-**Deployment Date:** 2026-04-01  
-**Version:** 2.0.0  
+**Deployment Date:** 2026-04-01
+**Version:** 2.1.0
 **Status:** ✅ Successfully Deployed
 
 ---
@@ -11,14 +11,23 @@
 ### ✅ Completed Tasks
 
 1. **Docker Cleanup**
-   - Stopped all existing heretek containers
-   - Removed all heretek volumes
+   - Stopped all existing heretek containers (26 containers removed)
+   - Removed all heretek volumes (19 volumes removed)
    - Removed conflicting Docker network
 
 2. **Fresh Docker Deployment**
    - Created new `.env` file with secure random values
    - Pulled latest container images
    - Deployed all services successfully
+
+3. **ClickHouse & Langfuse Setup**
+   - Added ClickHouse service for Langfuse V3 support
+   - Configured local Langfuse deployment (http://langfuse:3000)
+   - Disabled cluster mode for single-node deployment
+   - Disabled S3 event uploads for local deployment
+
+4. **Ollama Models**
+   - Pulled nomic-embed-text-v2-moe embedding model (957 MB)
 
 ### 🟢 Running Services
 
@@ -27,24 +36,22 @@
 | **LiteLLM Gateway** | Running | 4000 | ✅ Healthy |
 | **PostgreSQL (pgvector)** | Running | 5432 | ✅ Healthy |
 | **Redis** | Running | 6379 | ✅ Healthy |
-| **Ollama (AMD ROCm)** | Running | 11434 | 🟡 Starting |
+| **Ollama (AMD ROCm)** | Running | 11434 | 🟡 CPU Mode |
+| **ClickHouse** | Running | 8123, 9000 | ✅ Healthy |
 | **Langfuse PostgreSQL** | Running | 5433 | ✅ Healthy |
-| **Langfuse** | Stopped | 3000 | ⚠️ Requires ClickHouse |
+| **Langfuse** | Running | 3000 | 🟡 Running |
 
 ### ⚠️ Notes
 
-1. **Langfuse**: The Langfuse service has been stopped because the latest version requires ClickHouse which is not configured in the current docker-compose.yml. To enable Langfuse:
-   - Add ClickHouse service to docker-compose.yml
-   - Update LANGFUSE_ENABLED=true in .env
-   - Restart services
+1. **Ollama GPU**: GPU discovery timed out, falling back to CPU inference. The HSA_OVERRIDE_GFX_VERSION=10.3.0 is set for AMD ROCm compatibility.
 
-2. **API Keys**: The LiteLLM health check shows authentication errors for MiniMax and Z.ai providers. This is expected - update your API keys in `.env`:
+2. **Langfuse Health**: Langfuse is running but healthcheck may show unhealthy due to static export. The service is functional at http://localhost:3000
+
+3. **API Keys**: Update your API keys in `.env`:
    ```bash
    MINIMAX_API_KEY=your-actual-key
    ZAI_API_KEY=your-actual-key
    ```
-
-3. **Ollama**: The Ollama service is starting up and loading AMD GPU drivers. This may take a few minutes.
 
 ---
 
@@ -58,6 +65,9 @@
 | PostgreSQL | localhost:5432 | User: heretek, Password: see .env |
 | Redis | localhost:6379 | No password (local) |
 | Ollama | http://localhost:11434 | N/A |
+| ClickHouse | http://localhost:8123 | User: default, Password: see .env |
+| Langfuse | http://localhost:3000 | Sign up enabled |
+| Langfuse DB | localhost:5433 | User: langfuse, Password: see .env |
 
 ### Environment File Location
 

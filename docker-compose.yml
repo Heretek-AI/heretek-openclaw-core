@@ -49,6 +49,34 @@
 
 services:
   # ==============================================================================
+  # ClickHouse — Analytics Database for Langfuse V3
+  # ==============================================================================
+  # Required for Langfuse V3 observability platform
+  # Documentation: https://langfuse.com/self-hosting
+  # ==============================================================================
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    container_name: heretek-clickhouse
+    restart: unless-stopped
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-clickhouse_password}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ports:
+      - "127.0.0.1:8123:8123"  # HTTP interface
+      - "127.0.0.1:9000:9000"  # Native interface
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - heretek-network
+
+  # ==============================================================================
   # Langfuse — LLM Observability Platform (Self-Hosted)
   # ==============================================================================
   # Langfuse provides tracing, monitoring, and analytics for OpenClaw agents
@@ -72,13 +100,35 @@ services:
       - TELEMETRY_ENABLED=${LANGFUSE_TELEMETRY_ENABLED:-false}
       - AUTH_OPTIONS=CREDENTIALS
       - SIGN_UP_ENABLED=${LANGFUSE_SIGN_UP_ENABLED:-true}
+      # ─────────────────────────────────────────────────────────────────────────
+      # Langfuse V3 - ClickHouse Settings
+      # ─────────────────────────────────────────────────────────────────────────
+      # CLICKHOUSE_URL uses http:// protocol with port 8123 (HTTP interface)
+      # CLICKHOUSE_MIGRATION_URL uses clickhouse:// protocol with port 9000 (native TCP)
+      - CLICKHOUSE_URL=${CLICKHOUSE_URL:-http://default:clickhouse_password@clickhouse:8123/default}
+      - CLICKHOUSE_MIGRATION_URL=${CLICKHOUSE_MIGRATION_URL:-clickhouse://clickhouse:9000}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB_DEFAULT:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-clickhouse_password}
+      # Single-node deployment - disable cluster features
+      - CLICKHOUSE_CLUSTER_ENABLED=false
+      # Disable S3 event uploads for local deployment
+      - LANGFUSE_S3_EVENT_UPLOAD_ENABLED=false
+      # Disable S3 event uploads for local deployment
+      - LANGFUSE_S3_EVENT_UPLOAD_ENABLED=false
+      - LANGFUSE_S3_EVENT_UPLOAD_BUCKET=local
+      - LANGFUSE_S3_EVENT_UPLOAD_REGION=us-east-1
+      - LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID=local
+      - LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY=local
+    volumes:
+      - langfuse_blobs:/app/.blobs
     depends_on:
       langfuse-postgres:
         condition: service_healthy
-    volumes:
-      - langfuse_blobs:/app/.blobs
+      clickhouse:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -138,7 +188,7 @@ services:
       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY:-}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY:-}
-      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://cloud.langfuse.com}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-http://langfuse:3000}
       
       # ─────────────────────────────────────────────────────────────────────────
       # Provider API Keys
@@ -354,6 +404,10 @@ volumes:
   langfuse_postgres_data:
     driver: local
   langfuse_blobs:
+    driver: local
+  
+  # ClickHouse
+  clickhouse_data:
     driver: local
   
   # Collective memory (skills are bind-mounted, not a volume)

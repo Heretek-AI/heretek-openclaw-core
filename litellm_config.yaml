@@ -206,6 +206,127 @@ model_list:
       agent_role: archivist
       agent_id: historian
 
+  # Arbiter (Adjudicator) - Decision maker, conflict resolver
+  - model_name: agent/arbiter
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Arbiter Agent - Adjudicator role"
+      agent_role: adjudicator
+      agent_id: arbiter
+
+  # Catalyst (Accelerator) - Process optimization, workflow acceleration
+  - model_name: agent/catalyst
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Catalyst Agent - Accelerator role"
+      agent_role: accelerator
+      agent_id: catalyst
+
+  # Chronos (Timekeeper) - Time management, scheduling
+  - model_name: agent/chronos
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Chronos Agent - Timekeeper role"
+      agent_role: timekeeper
+      agent_id: chronos
+
+  # Coordinator (Integrator) - Cross-agent coordination
+  - model_name: agent/coordinator
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Coordinator Agent - Integrator role"
+      agent_role: integrator
+      agent_id: coordinator
+
+  # Echo (Communicator) - External communications, broadcasts
+  - model_name: agent/echo
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Echo Agent - Communicator role"
+      agent_role: communicator
+      agent_id: echo
+
+  # Habit Forge (Optimizer) - Habit formation, pattern tracking
+  - model_name: agent/habit-forge
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Habit Forge Agent - Optimizer role"
+      agent_role: optimizer
+      agent_id: habit-forge
+
+  # Metis (Strategist) - Strategic planning, tactical analysis
+  - model_name: agent/metis
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Metis Agent - Strategist role"
+      agent_role: strategist
+      agent_id: metis
+
+  # Nexus (Connector) - System integration, API management
+  - model_name: agent/nexus
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Nexus Agent - Connector role"
+      agent_role: connector
+      agent_id: nexus
+
+  # Perceiver (Sensor) - Data interpretation, pattern extraction
+  - model_name: agent/perceiver
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Perceiver Agent - Sensor role"
+      agent_role: sensor
+      agent_id: perceiver
+
+  # Prism (Analyzer) - Multi-perspective analysis
+  - model_name: agent/prism
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Prism Agent - Analyzer role"
+      agent_role: analyzer
+      agent_id: prism
+
+  # Sentinel Prime (Commander) - Lead security agent, threat coordination
+  - model_name: agent/sentinel-prime
+    litellm_params:
+      model: minimax/MiniMax-M2.7
+      api_key: os.environ/MINIMAX_API_KEY
+      api_base: os.environ/MINIMAX_API_BASE
+    model_info:
+      description: "Sentinel Prime Agent - Commander role"
+      agent_role: commander
+      agent_id: sentinel-prime
+
   # ==========================================================================
   # OLLAMA EMBEDDING (Local - AMD GPU)
   # ==========================================================================
@@ -537,6 +658,116 @@ agent_model_mappings:
     temperature: 0.3
     budget_daily_usd: 10.00
 
+  # -------------------------------------------------------------------------
+  # Arbiter - Adjudicator / Decision maker
+  # -------------------------------------------------------------------------
+  arbiter:
+    primary: minimax/MiniMax-M2.7
+    fallback: anthropic/claude-3-5-sonnet
+    max_tokens: 8192
+    temperature: 0.5
+    budget_daily_usd: 25.00
+
+  # -------------------------------------------------------------------------
+  # Catalyst - Accelerator / Process optimization
+  # -------------------------------------------------------------------------
+  catalyst:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o-mini
+    max_tokens: 4096
+    temperature: 0.7
+    budget_daily_usd: 10.00
+
+  # -------------------------------------------------------------------------
+  # Chronos - Timekeeper / Schedule management
+  # -------------------------------------------------------------------------
+  chronos:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o
+    max_tokens: 4096
+    temperature: 0.5
+    budget_daily_usd: 10.00
+
+  # -------------------------------------------------------------------------
+  # Coordinator - Integrator / Cross-agent coordination
+  # -------------------------------------------------------------------------
+  coordinator:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o
+    max_tokens: 4096
+    temperature: 0.6
+    budget_daily_usd: 15.00
+
+  # -------------------------------------------------------------------------
+  # Echo - Communicator / External communications
+  # -------------------------------------------------------------------------
+  echo:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o-mini
+    max_tokens: 4096
+    temperature: 0.7
+    budget_daily_usd: 10.00
+
+  # -------------------------------------------------------------------------
+  # Habit Forge - Optimizer / Habit formation
+  # -------------------------------------------------------------------------
+  habit-forge:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o-mini
+    max_tokens: 4096
+    temperature: 0.6
+    budget_daily_usd: 10.00
+
+  # -------------------------------------------------------------------------
+  # Metis - Strategist / Strategic planning
+  # -------------------------------------------------------------------------
+  metis:
+    primary: minimax/MiniMax-M2.7
+    fallback: anthropic/claude-3-5-sonnet
+    max_tokens: 8192
+    temperature: 0.7
+    budget_daily_usd: 20.00
+
+  # -------------------------------------------------------------------------
+  # Nexus - Connector / System integration
+  # -------------------------------------------------------------------------
+  nexus:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o
+    max_tokens: 4096
+    temperature: 0.5
+    budget_daily_usd: 15.00
+
+  # -------------------------------------------------------------------------
+  # Perceiver - Sensor / Data interpretation
+  # -------------------------------------------------------------------------
+  perceiver:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o
+    max_tokens: 4096
+    temperature: 0.6
+    budget_daily_usd: 15.00
+
+  # -------------------------------------------------------------------------
+  # Prism - Analyzer / Multi-perspective analysis
+  # -------------------------------------------------------------------------
+  prism:
+    primary: minimax/MiniMax-M2.7
+    fallback: anthropic/claude-3-5-sonnet
+    max_tokens: 8192
+    temperature: 0.7
+    budget_daily_usd: 15.00
+
+  # -------------------------------------------------------------------------
+  # Sentinel Prime - Commander / Security coordination
+  # -------------------------------------------------------------------------
+  sentinel-prime:
+    primary: minimax/MiniMax-M2.7
+    fallback: anthropic/claude-3-haiku
+    max_tokens: 4096
+    temperature: 0.3
+    budget_daily_usd: 15.00
+
 # ==============================================================================
 # Budget & Rate Limits (Per Agent)
 # ==============================================================================
@@ -557,6 +788,16 @@ budget_settings:
     agent/dreamer: 500000
     agent/empath: 400000
     agent/historian: 500000
+    agent/catalyst: 400000
+    agent/chronos: 300000
+    agent/coordinator: 400000
+    agent/echo: 300000
+    agent/habit-forge: 300000
+    agent/metis: 500000
+    agent/nexus: 400000
+    agent/perceiver: 400000
+    agent/prism: 400000
+    agent/sentinel-prime: 500000
   
   # Global budget
   global_budget: 5000000
