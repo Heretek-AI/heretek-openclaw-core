@@ -1,0 +1,87 @@
+# ==============================================================================
+# Heretek OpenClaw — OpenClaw Gateway Service (Modular)
+# ==============================================================================
+# OpenClaw Gateway for agent-to-agent (A2A) WebSocket RPC communication
+# 
+# Usage:
+#   docker compose -f docker-compose.gateway.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.gateway.yml up -d
+#
+# Ports:
+#   18789 - OpenClaw Gateway WebSocket RPC
+#   18788 - OpenClaw Gateway HTTP health endpoints
+#
+# Endpoints:
+#   ws://localhost:18789/a2a - WebSocket A2A communication
+#   http://localhost:18788/health - Health check
+#   http://localhost:18788/agents - Connected agents list
+# ==============================================================================
+
+services:
+  # ==============================================================================
+  # OpenClaw Gateway — A2A WebSocket RPC Server
+  # ==============================================================================
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: heretek-gateway
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:-18789}:18789"
+      - "127.0.0.1:${GATEWAY_HTTP_PORT:-18788}:18788"
+    environment:
+      # Gateway configuration
+      - GATEWAY_PORT=18789
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_AUTH_ENABLED=${GATEWAY_AUTH_ENABLED:-false}
+      - GATEWAY_AUTH_TOKEN=${GATEWAY_AUTH_TOKEN:-}
+      
+      # Redis connection for message persistence
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      
+      # A2A configuration
+      - A2A_PREFIX=openclaw:a2a
+      - MESSAGE_TIMEOUT=${MESSAGE_TIMEOUT:-30000}
+      - HEARTBEAT_INTERVAL=${HEARTBEAT_INTERVAL:-30000}
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - NODE_ENV=production
+    volumes:
+      # Mount gateway code
+      - ./gateway:/app/gateway:ro
+      # Mount skills for A2A messaging
+      - ./skills:/app/skills:ro
+      # Mount agent configurations
+      - ./agents:/app/agents:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const req = http.get('http://localhost:18788/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1));"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - heretek-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  gateway_logs:
+    driver: local
+    name: heretek-gateway-logs
+
+networks:
+  heretek-network:
+    driver: bridge
+    name: heretek-network
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

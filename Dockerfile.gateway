@@ -1,0 +1,63 @@
+# ==============================================================================
+# Heretek OpenClaw — OpenClaw Gateway Dockerfile
+# ==============================================================================
+# Docker image for OpenClaw Gateway WebSocket RPC server
+# 
+# Build:
+#   docker build -f Dockerfile.gateway -t heretek-openclaw-gateway:latest .
+#
+# Run:
+#   docker run -p 18789:18789 -e REDIS_URL=redis://redis:6379 heretek-openclaw-gateway:latest
+# ==============================================================================
+
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    dumb-init \
+    tini
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Copy gateway and skills
+COPY gateway/ ./gateway/
+COPY skills/ ./skills/
+COPY agents/ ./agents/
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S openclaw && \
+    adduser -S openclaw -u 1001 -G openclaw
+
+# Set ownership
+RUN chown -R openclaw:openclaw /app
+
+# Switch to non-root user
+USER openclaw
+
+# Expose ports
+# 18789 - WebSocket RPC for A2A communication
+# 18788 - HTTP health endpoints
+EXPOSE 18789 18788
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD node -e "const http = require('http'); const req = http.get('http://localhost:18788/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }); req.on('error', () => process.exit(1));"
+
+# Use tini as init system for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start gateway server
+CMD ["node", "gateway/openclaw-gateway.js"]
+
+# Labels
+LABEL maintainer="Heretek OpenClaw"
+LABEL description="OpenClaw Gateway for A2A WebSocket RPC communication"
+LABEL version="1.0.0"

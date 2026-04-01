@@ -1,0 +1,81 @@
+# ==============================================================================
+# Heretek OpenClaw — Redis Service (Modular)
+# ==============================================================================
+# Redis cache and messaging service for A2A communication
+# 
+# Usage:
+#   docker compose -f docker-compose.redis.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.redis.yml up -d
+#
+# Ports:
+#   6379 - Redis server
+# ==============================================================================
+
+services:
+  # ==============================================================================
+  # Redis — Caching & A2A Messaging
+  # ==============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: heretek-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --notify-keyspace-events Ex
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    environment:
+      - REDIS_MAXMEMORY=512mb
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - heretek-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ==============================================================================
+  # Redis Commander — Web-based Redis Management (Optional)
+  # ==============================================================================
+  # Access at http://localhost:8081
+  # Uncomment to enable Redis web UI
+  # ==============================================================================
+  # redis-commander:
+  #   image: rediscommander/redis-commander:latest
+  #   container_name: heretek-redis-commander
+  #   restart: unless-stopped
+  #   environment:
+  #     - REDIS_HOSTS=local:redis:6379
+  #     - HTTP_USER=admin
+  #     - HTTP_PASSWORD=admin
+  #   ports:
+  #     - "127.0.0.1:8081:8081"
+  #   depends_on:
+  #     redis:
+  #       condition: service_started
+  #   networks:
+  #     - heretek-network
+
+volumes:
+  redis_data:
+    driver: local
+    name: heretek-redis-data
+
+networks:
+  heretek-network:
+    driver: bridge
+    name: heretek-network
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
