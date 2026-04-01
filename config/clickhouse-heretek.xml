@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<!--
+  Heretek ClickHouse Configuration Extensions
+  Optimized for Langfuse V3 event storage with triad tracing support
+-->
+<clickhouse>
+    <!-- Enable HTTP interface for Langfuse -->
+    <http_port>8123</http_port>
+    
+    <!-- Native TCP interface -->
+    <tcp_port>9000</tcp_port>
+    
+    <!-- Optimize for time-series event data -->
+    <default_table_engine>MergeTree</default_table_engine>
+    
+    <!-- Compression for large event volumes -->
+    <compression>
+        <case>
+            <min_part_size>10000000000</min_part_size>
+            <method>zstd</method>
+        </case>
+    </compression>
+    
+    <!-- Retention policy for observability data -->
+    <merge_tree>
+        <enable_mixed_granularity_parts>1</enable_mixed_granularity_parts>
+        <parts_to_throw_insert>300</parts_to_throw_insert>
+        <max_replicated_merges_in_queue>16</max_replicated_merges_in_queue>
+    </merge_tree>
+    
+    <!-- Logging configuration -->
+    <logger>
+        <level>information</level>
+        <console>true</console>
+    </logger>
+    
+    <!-- Query logging for debugging -->
+    <query_log>
+        <table>system.query_log</table>
+        <engine>ENGINE = SystemLog</engine>
+        <flush_interval_milliseconds>7500</flush_interval_milliseconds>
+    </query_log>
+</clickhouse>

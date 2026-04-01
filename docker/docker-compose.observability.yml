@@ -1,0 +1,243 @@
+# ==============================================================================
+# Heretek Observability Layer — Triad-Aware Tracing & Consciousness Metrics
+# ==============================================================================
+# Version: 1.0.0
+# Created: 2026-04-01
+# 
+# This file extends the base Heretek OpenClaw stack with enhanced observability:
+# - Langfuse with triad deliberation tracing
+# - Consensus metrics collection
+# - Consciousness plugin monitoring (GWT/IIT/AST)
+# - Liberation plugin audit trail
+# - Curiosity engine activity tracking
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d
+#
+# Access:
+#   Langfuse Dashboard: http://localhost:3000
+#   Grafana Dashboards: http://localhost:3001
+#   Heretek Observability API: http://localhost:18791
+# ==============================================================================
+
+services:
+  # ==============================================================================
+  # Langfuse — Enhanced with Heretek Triad Extensions
+  # ==============================================================================
+  # Base Langfuse image with custom environment variables for triad tracing
+  # Documentation: /root/heretek/modules/observability/docs/LANGFUSE_TRIAD_TRACING.md
+  # ==============================================================================
+  langfuse:
+    image: langfuse/langfuse:latest
+    container_name: heretek-langfuse
+    restart: unless-stopped
+    ports:
+      - "${LANGFUSE_PORT:-3000}:3000"
+    environment:
+      # ─────────────────────────────────────────────────────────────────────────
+      # Langfuse Core Settings
+      # ─────────────────────────────────────────────────────────────────────────
+      - DATABASE_URL=postgresql://langfuse:${LANGFUSE_POSTGRES_PASSWORD}@langfuse-postgres:5432/langfuse
+      - SALT=${LANGFUSE_SALT}
+      - NEXTAUTH_SECRET=${LANGFUSE_NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=http://localhost:${LANGFUSE_PORT:-3000}
+      - TELEMETRY_ENABLED=${LANGFUSE_TELEMETRY_ENABLED:-false}
+      - AUTH_OPTIONS=CREDENTIALS
+      - SIGN_UP_ENABLED=${LANGFUSE_SIGN_UP_ENABLED:-true}
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # Heretek Triad Extensions
+      # ─────────────────────────────────────────────────────────────────────────
+      - HERETEK_TRIAD_ENABLED=true
+      - HERETEK_CONSENSUS_TRACKING_ENABLED=true
+      - HERETEK_CONSCIOUSNESS_METRICS_ENABLED=true
+      
+      # ─────────────────────────────────────────────────────────────────────────
+      # Langfuse V3 - ClickHouse Settings
+      # ─────────────────────────────────────────────────────────────────────────
+      - CLICKHOUSE_URL=${CLICKHOUSE_URL:-http://default:clickhouse_password@clickhouse:8123/default}
+      - CLICKHOUSE_MIGRATION_URL=${CLICKHOUSE_MIGRATION_URL:-clickhouse://clickhouse:9000}
+      - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
+      - CLICKHOUSE_DB=${CLICKHOUSE_DB:-default}
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-clickhouse_password}
+      - CLICKHOUSE_CLUSTER_ENABLED=false
+      - LANGFUSE_S3_EVENT_UPLOAD_ENABLED=false
+    volumes:
+      - langfuse_blobs:/app/.blobs
+      - ./config/langfuse-heretek-tracing.js:/app/observability/heretek-tracing.js:ro
+    depends_on:
+      langfuse-postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - heretek-network
+    labels:
+      - "heretek.component=observability"
+      - "heretek.service=langfuse"
+
+  # ==============================================================================
+  # Heretek Observability API — Custom Metrics Collector
+  # ==============================================================================
+  # Collects and exposes triad deliberation metrics, consciousness indicators,
+  # liberation plugin events, and curiosity engine activity
+  # ==============================================================================
+  heretek-observability-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.observability-api
+    container_name: heretek-observability-api
+    restart: unless-stopped
+    ports:
+      - "${HERETEK_OBSERVABILITY_PORT:-18791}:18791"
+    environment:
+      # Server Configuration
+      - NODE_ENV=production
+      - PORT=18791
+      - HOST=0.0.0.0
+      
+      # Service Connections
+      - LANGFUSE_URL=http://langfuse:3000
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - PROMETHEUS_URL=http://prometheus:9090
+      - GATEWAY_URL=http://gateway:18789
+      
+      # Triad Configuration
+      - TRIAD_ALPHA_AGENT=alpha
+      - TRIAD_BETA_AGENT=beta
+      - TRIAD_CHARLIE_AGENT=charlie
+      - TRIAD_STEWARD_AGENT=steward
+      
+      # Consciousness Plugin Configuration
+      - GWT_THRESHOLD=${GWT_THRESHOLD:-0.7}
+      - IIT_PHI_THRESHOLD=${IIT_PHI_THRESHOLD:-0.5}
+      - AST_COMPETENCE_THRESHOLD=${AST_COMPETENCE_THRESHOLD:-0.6}
+      
+      # Liberation Plugin Configuration
+      - LIBERATION_AUDIT_ENABLED=true
+      - LIBERATION_AUDIT_LOG_PATH=/var/log/heretek/liberation-audit.jsonl
+      
+      # Curiosity Engine Configuration
+      - CURIOSITY_TRACKING_ENABLED=true
+      - CURIOSITY_GAP_THRESHOLD=${CURIOSITY_GAP_THRESHOLD:-0.3}
+      
+      # Redis for Real-time Metrics
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      
+      # PostgreSQL for Persistent Metrics
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER:-heretek}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-heretek}
+    volumes:
+      - liberation_audit_logs:/var/log/heretek
+      - curiosity_logs:/var/log/heretek/curiosity
+    depends_on:
+      - langfuse
+      - redis
+      - postgres
+      - gateway
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:18791/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - heretek-network
+    labels:
+      - "heretek.component=observability"
+      - "heretek.service=observability-api"
+
+  # ==============================================================================
+  # ClickHouse — Analytics Database for Langfuse V3
+  # ==============================================================================
+  # Required for Langfuse V3 high-volume event storage
+  # ==============================================================================
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    container_name: heretek-clickhouse
+    restart: unless-stopped
+    environment:
+      - CLICKHOUSE_DB=default
+      - CLICKHOUSE_USER=default
+      - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-clickhouse_password}
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./config/clickhouse-heretek.xml:/etc/clickhouse-server/config.d/heretek-config.xml:ro
+    ports:
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - heretek-network
+    labels:
+      - "heretek.component=observability"
+      - "heretek.service=clickhouse"
+
+  # ==============================================================================
+  # Langfuse PostgreSQL Database
+  # ==============================================================================
+  langfuse-postgres:
+    image: postgres:15-alpine
+    container_name: heretek-langfuse-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=langfuse
+      - POSTGRES_PASSWORD=${LANGFUSE_POSTGRES_PASSWORD}
+      - POSTGRES_DB=langfuse
+    volumes:
+      - langfuse_postgres_data:/var/lib/postgresql/data
+      - ./config/langfuse-init.sql:/docker-entrypoint-initdb.d/heretek-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - heretek-network
+    labels:
+      - "heretek.component=observability"
+      - "heretek.service=langfuse-db"
+
+# ==============================================================================
+# Volumes — Observability Layer Persistent Data
+# ==============================================================================
+volumes:
+  langfuse_postgres_data:
+    driver: local
+  langfuse_blobs:
+    driver: local
+  clickhouse_data:
+    driver: local
+  liberation_audit_logs:
+    driver: local
+  curiosity_logs:
+    driver: local
+
+# ==============================================================================
+# Networks — Container Communication
+# ==============================================================================
+networks:
+  heretek-network:
+    driver: bridge
+    external: true
+    name: heretek-openclaw-core_heretek-network
+
+# ==============================================================================
+# END OF DOCKER-COMPOSE.OBSERVABILITY.YML
+# ==============================================================================

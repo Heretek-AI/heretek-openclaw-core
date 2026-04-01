@@ -1,132 +1,31 @@
 {
-  "name": "@heretek/openclaw-core",
+  "name": "@heretek/swarm-memory",
   "version": "1.0.0",
-  "description": "Heretek OpenClaw - Self-improving autonomous agent collective with LiteLLM A2A protocol",
-  "type": "module",
+  "description": "Heretek Swarm Memory Layer - Cross-agent memory sharing with triad gating and consciousness awareness",
+  "main": "heretek-swarm-memory.js",
+  "type": "commonjs",
   "scripts": {
-    "postinstall": "scripts/patch-apply.sh",
-    
     "test": "vitest run",
-    "test:watch": "vitest watch",
-    "test:unit": "vitest run tests/unit/",
-    "test:integration": "vitest run tests/integration/",
-    "test:e2e": "vitest run tests/e2e/",
-    "test:skills": "vitest run tests/skills/",
-    "test:coverage": "vitest run --coverage",
-    "test:coverage:html": "vitest run --coverage --reporter=html",
-    "test:ui": "vitest --ui",
-    
-    "test:all": "./scripts/run-tests.sh",
-    "test:all:coverage": "./scripts/run-tests.sh --coverage",
-    "test:e2e:full": "./scripts/run-tests-e2e.sh",
-    "test:coverage:report": "./scripts/generate-coverage-report.sh",
-    "test:coverage:serve": "./scripts/generate-coverage-report.sh --serve",
-    
-    "typecheck": "tsc --noEmit",
-    "typecheck:watch": "tsc --noEmit --watch",
-    
-    "lint": "eslint . --cache",
-    "lint:fix": "eslint . --cache --fix",
-    
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "format:write": "prettier --write .",
-    
-    "clean": "rm -rf dist/ build/ .svelte-kit/ coverage/ test-results/",
-    "clean:modules": "rm -rf node_modules/ plugins/*/node_modules/",
-    
-    "build": "npm run typecheck && npm run lint && npm run format:check",
-    "build:ci": "npm run typecheck && npm run lint",
-    
-    "prepare": "husky install",
-    "precommit": "lint-staged",
-    
-    "docker:build": "docker compose build",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down",
-    "docker:logs": "docker compose logs -f",
-    "docker:restart": "docker compose restart",
-    
-    "docker:test:up": "docker-compose -f docker-compose.test.yml up -d",
-    "docker:test:down": "docker-compose -f docker-compose.test.yml down",
-    "docker:test:run": "docker-compose -f docker-compose.test.yml up test-runner",
-    "docker:test:e2e": "docker-compose -f docker-compose.test.yml up --build test-runner",
-    
-    "health:check": "./scripts/health-check.sh",
-    "health:litellm": "python3 ./scripts/litellm-healthcheck.py",
-    
-    "backup": "./scripts/production-backup.sh",
-    
-    "validate:config": "node scripts/validate-config.js",
-    "validate:config:strict": "node scripts/validate-config.js --strict",
-    "validate:cycles": "./scripts/validate-cycles.sh",
-    
-    "test:e2e:playwright": "playwright test",
-    "test:e2e:ui": "playwright test --ui",
-    
-    "patch:apply": "scripts/patch-apply.sh",
-    "patch:create": "scripts/patch-create.sh",
-    "patch:status": "scripts/patch-status.sh",
-    "patch:list": "cat .patchestoo",
-    
-    "upstream:sync": "scripts/upstream-sync.sh",
-    "upstream:fetch": "git fetch upstream",
-    "upstream:rebase": "git rebase upstream/main"
+    "lint": "eslint ."
   },
   "keywords": [
-    "ai",
-    "agents",
-    "llm",
-    "litellm",
-    "a2a",
-    "autonomous",
-    "collective",
     "heretek",
-    "openclaw"
+    "swarm-memory",
+    "agent-memory",
+    "triad",
+    "consciousness"
   ],
-  "author": "Heretek",
+  "author": "Heretek Collective",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/heretek/heretek-openclaw-core.git"
-  },
-  "bugs": {
-    "url": "https://github.com/heretek/heretek-openclaw-core/issues"
-  },
-  "homepage": "https://github.com/heretek/heretek-openclaw-core#readme",
-  "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=9.0.0"
+  "dependencies": {
+    "ioredis": "^5.3.2",
+    "pg": "^8.11.3",
+    "pgvector": "^0.1.8",
+    "uuid": "^9.0.0",
+    "eventemitter3": "^5.0.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.0.0",
-    "@playwright/test": "^1.42.0",
-    "@types/node": "^20.11.0",
-    "@types/ws": "^8.5.0",
-    "@vitest/coverage-v8": "^1.3.0",
-    "@vitest/ui": "^1.3.0",
-    "eslint": "^9.0.0",
-    "eslint-config-prettier": "^9.1.0",
-    "husky": "^9.0.0",
-    "lint-staged": "^15.2.0",
-    "prettier": "^3.2.0",
-    "redis": "^4.6.0",
-    "typescript": "^5.3.0",
-    "typescript-eslint": "^8.0.0",
-    "vitest": "^1.3.0",
-    "ws": "^8.16.0"
-  },
-  "lint-staged": {
-    "*.{js,ts}": [
-      "eslint --cache --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,yaml,yml}": [
-      "prettier --write"
-    ]
-  },
-  "volta": {
-    "node": "20.11.0",
-    "npm": "10.2.4"
+    "vitest": "^1.3.1",
+    "eslint": "^8.57.0"
   }
 }
