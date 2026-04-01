@@ -1,6 +1,6 @@
 {
-  "name": "heretek-openclaw",
-  "version": "2.0.0",
+  "name": "@heretek/openclaw-core",
+  "version": "1.0.0",
   "description": "Heretek OpenClaw - Self-improving autonomous agent collective with LiteLLM A2A protocol",
   "type": "module",
   "scripts": {
@@ -37,10 +37,6 @@
     "validate:config": "node scripts/validate-config.js",
     "validate:config:strict": "node scripts/validate-config.js --strict",
     "validate:cycles": "./scripts/validate-cycles.sh",
-    "ci:all": "npm run build:ci && npm run test:coverage && npm run docker:build",
-    "ci:test": "npm run typecheck && npm run lint && npm run test",
-    "ci:security": "npm audit --audit-level=moderate",
-    "ci:docs": "markdownlint '**/*.md' --ignore node_modules",
     "test:e2e:playwright": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -59,12 +55,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/heretek/heretek-openclaw.git"
+    "url": "https://github.com/heretek/heretek-openclaw-core.git"
   },
   "bugs": {
-    "url": "https://github.com/heretek/heretek-openclaw/issues"
+    "url": "https://github.com/heretek/heretek-openclaw-core/issues"
   },
-  "homepage": "https://github.com/heretek/heretek-openclaw#readme",
+  "homepage": "https://github.com/heretek/heretek-openclaw-core#readme",
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=9.0.0"
