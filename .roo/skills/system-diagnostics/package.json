@@ -1,0 +1,38 @@
+{
+  "name": "system-diagnostics",
+  "version": "1.0.0",
+  "description": "Comprehensive system diagnostics for OpenClaw",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "full": "node src/index.js full",
+    "component": "node src/index.js component",
+    "config": "node src/index.js config",
+    "deps": "node src/index.js deps",
+    "logs": "node src/index.js logs",
+    "health-score": "node src/index.js health-score",
+    "test": "node tests/diagnostics.test.js"
+  },
+  "keywords": [
+    "openclaw",
+    "diagnostics",
+    "health-check",
+    "system-audit",
+    "troubleshooting"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "node-fetch": "^2.7.0",
+    "yaml": "^2.3.4",
+    "winston": "^3.11.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "ora": "^5.4.1",
+    "table": "^6.8.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

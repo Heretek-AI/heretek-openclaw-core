@@ -1,0 +1,33 @@
+{
+  "name": "triad-orchestrator",
+  "version": "1.0.0",
+  "description": "Triad deliberation workflow management for OpenClaw governance",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "propose": "node src/index.js propose",
+    "vote": "node src/index.js vote",
+    "tabulate": "node src/index.js tabulate",
+    "status": "node src/index.js status",
+    "dashboard": "node src/index.js dashboard",
+    "test": "node tests/triad-orchestrator.test.js"
+  },
+  "keywords": [
+    "openclaw",
+    "triad",
+    "governance",
+    "deliberation",
+    "voting",
+    "consensus"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "node-fetch": "^2.7.0",
+    "uuid": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

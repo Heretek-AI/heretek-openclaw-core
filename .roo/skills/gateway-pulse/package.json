@@ -1,0 +1,34 @@
+{
+  "name": "gateway-pulse",
+  "version": "1.0.0",
+  "description": "Gateway and LiteLLM monitoring for OpenClaw",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "status": "node src/index.js status",
+    "monitor": "node src/index.js monitor",
+    "metrics": "node src/index.js metrics",
+    "alerts": "node src/index.js alerts",
+    "test": "node tests/gateway-pulse.test.js"
+  },
+  "keywords": [
+    "openclaw",
+    "gateway",
+    "litellm",
+    "monitoring",
+    "health",
+    "prometheus",
+    "metrics"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "node-fetch": "^2.7.0",
+    "express": "^4.18.2",
+    "prom-client": "^15.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

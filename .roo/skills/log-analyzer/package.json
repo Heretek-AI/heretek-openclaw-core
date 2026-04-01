@@ -1,0 +1,39 @@
+{
+  "name": "log-analyzer",
+  "version": "1.0.0",
+  "description": "Intelligent log analysis for OpenClaw with pattern detection and correlation",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "analyze": "node src/index.js analyze",
+    "patterns": "node src/index.js patterns",
+    "correlate": "node src/index.js correlate",
+    "timeline": "node src/index.js timeline",
+    "root-cause": "node src/index.js root-cause",
+    "categorize": "node src/index.js categorize",
+    "test": "node tests/log-analyzer.test.js"
+  },
+  "keywords": [
+    "openclaw",
+    "log-analysis",
+    "pattern-detection",
+    "troubleshooting",
+    "debugging"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "node-fetch": "^2.7.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "moment": "^2.29.4",
+    "winston": "^3.11.0",
+    "lodash": "^4.17.21",
+    "ora": "^5.4.1",
+    "cli-table3": "^0.6.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

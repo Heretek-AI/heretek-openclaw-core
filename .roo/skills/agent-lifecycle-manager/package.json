@@ -1,0 +1,35 @@
+{
+  "name": "agent-lifecycle-manager",
+  "version": "1.0.0",
+  "description": "Unified agent lifecycle management for OpenClaw",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "status": "node src/index.js status",
+    "start-all": "node src/index.js start-all",
+    "stop-all": "node src/index.js stop-all",
+    "restart-all": "node src/index.js restart-all",
+    "rolling-restart": "node src/index.js rolling-restart",
+    "monitor": "node src/index.js monitor",
+    "health-check": "node src/index.js health-check",
+    "test": "node tests/lifecycle-manager.test.js"
+  },
+  "keywords": [
+    "openclaw",
+    "agent",
+    "lifecycle",
+    "orchestration",
+    "docker",
+    "container"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "node-fetch": "^2.7.0",
+    "dockerode": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

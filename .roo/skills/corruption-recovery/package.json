@@ -1,0 +1,42 @@
+{
+  "name": "corruption-recovery",
+  "version": "1.0.0",
+  "description": "Automated corruption detection and recovery for OpenClaw",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "scan": "node src/index.js scan",
+    "list": "node src/index.js list",
+    "select": "node src/index.js select",
+    "preview": "node src/index.js preview",
+    "recover": "node src/index.js recover",
+    "validate": "node src/index.js validate",
+    "rollback": "node src/index.js rollback",
+    "test": "node tests/corruption-recovery.test.js"
+  },
+  "keywords": [
+    "openclaw",
+    "corruption-recovery",
+    "backup-restore",
+    "disaster-recovery",
+    "integrity"
+  ],
+  "author": "Heretek",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.14.2",
+    "node-fetch": "^2.7.0",
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "winston": "^3.11.0",
+    "lodash": "^4.17.21",
+    "ora": "^5.4.1",
+    "cli-table3": "^0.6.3",
+    "crypto-js": "^4.2.0",
+    "tar": "^6.2.0",
+    "glob": "^10.3.10"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
