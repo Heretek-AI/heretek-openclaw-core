@@ -485,14 +485,13 @@
     },
     "list": [
       {
-        "id": "main"
-      },
-      {
         "id": "steward",
         "name": "steward",
         "workspace": "/root/.openclaw/agents/steward/workspace",
         "agentDir": "/root/.openclaw/agents/steward",
-        "model": "litellm/agent/steward"
+        "model": "litellm/agent/steward",
+        "role": "orchestrator",
+        "primary": true
       },
       {
         "id": "alpha",

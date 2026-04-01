@@ -408,7 +408,11 @@ class OpenClawGateway extends EventEmitter {
                     break;
 
                 case 'ping':
-                    this._handlePing(ws, agentId);
+                    this._handlePing(ws, agentId, message);
+                    break;
+
+                case 'pong':
+                    this._handlePong(ws, agentId, message);
                     break;
 
                 case 'discover':
@@ -567,20 +571,60 @@ class OpenClawGateway extends EventEmitter {
     }
 
     /**
-     * Handle ping
+     * Handle ping (heartbeat from agent)
      * @private
+     * @param {WebSocket} ws - WebSocket client
+     * @param {string} agentId - Agent ID
+     * @param {Object} message - Ping message with heartbeat data
      */
-    _handlePing(ws, agentId) {
+    _handlePing(ws, agentId, message) {
+        // Send pong response
         ws.send(JSON.stringify({
             type: 'pong',
             timestamp: Date.now(),
-            agentId
+            agentId,
+            heartbeat: {
+                received: new Date().toISOString(),
+                agentHeartbeat: message.heartbeat || {}
+            }
         }));
 
-        // Update last seen
+        // Update last seen with heartbeat data
         if (agentId && this.agents.has(agentId)) {
-            this.agents.get(agentId).lastSeen = new Date().toISOString();
+            const agent = this.agents.get(agentId);
+            agent.lastSeen = new Date().toISOString();
+            
+            // Store heartbeat metadata if provided
+            if (message.heartbeat) {
+                agent.lastHeartbeat = {
+                    uptime: message.heartbeat.uptime,
+                    memoryUsage: message.heartbeat.memoryUsage,
+                    lastHeartbeatSent: message.heartbeat.lastHeartbeatSent,
+                    receivedAt: agent.lastSeen
+                };
+            }
+            
+            // Update Redis with heartbeat status
+            if (this.redisClient) {
+                this.redisClient.hset(`${A2A_PREFIX}:agent:${agentId}`, {
+                    lastSeen: agent.lastSeen,
+                    status: 'active',
+                    lastHeartbeatUptime: message.heartbeat?.uptime?.toString() || null
+                });
+            }
         }
+    }
+
+    /**
+     * Handle pong (heartbeat acknowledgment from gateway)
+     * @private
+     * @param {WebSocket} ws - WebSocket client
+     * @param {string} agentId - Agent ID
+     * @param {Object} message - Pong message
+     */
+    _handlePong(ws, agentId, message) {
+        console.log(`[Gateway] Heartbeat ack from ${agentId || 'unknown'} at ${message.timestamp}`);
+        // Pong messages are acknowledgments - the agent handles the response internally
     }
 
     /**
@@ -641,14 +685,14 @@ class OpenClawGateway extends EventEmitter {
     _handleHttpRequest(req, res) {
         const url = new URL(req.url, `http://${req.headers.host}`);
 
-        // Health check endpoint
+        // Health check endpoint - basic gateway health
         if (url.pathname === '/health') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(this.getStatus()));
             return;
         }
 
-        // Agents endpoint
+        // Agents endpoint - list connected agents
         if (url.pathname === '/agents') {
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({
@@ -658,9 +702,135 @@ class OpenClawGateway extends EventEmitter {
             return;
         }
 
+        // Agent status endpoint - detailed agent online/offline state tracking
+        if (url.pathname === '/agent-status' || url.pathname.startsWith('/agent-status/')) {
+            this._handleAgentStatusHttp(req, res, url);
+            return;
+        }
+
         // 404 for other paths
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Not found' }));
+    }
+
+    /**
+     * Handle agent status HTTP requests
+     * @private
+     * @param {http.IncomingMessage} req - HTTP request
+     * @param {http.ServerResponse} res - HTTP response
+     * @param {URL} url - Parsed URL
+     */
+    async _handleAgentStatusHttp(req, res, url) {
+        const pathParts = url.pathname.split('/');
+        const specificAgentId = pathParts[pathParts.length - 1];
+        
+        // GET /agent-status - all agents with status
+        if (url.pathname === '/agent-status') {
+            const agentStatus = [];
+            
+            for (const [agentId, agent] of this.agents) {
+                const now = Date.now();
+                const lastSeenTime = new Date(agent.lastSeen).getTime();
+                const timeSinceLastSeen = now - lastSeenTime;
+                
+                // Consider agent offline if no heartbeat for more than 2 heartbeat intervals (60 seconds)
+                const isOnline = agent.ws && agent.ws.readyState === WebSocket.OPEN && timeSinceLastSeen < (this.config.heartbeatInterval * 2);
+                
+                agentStatus.push({
+                    agentId,
+                    status: isOnline ? 'online' : 'offline',
+                    lastSeen: agent.lastSeen,
+                    registeredAt: agent.registeredAt,
+                    metadata: agent.metadata,
+                    websocketReadyState: agent.ws ? agent.ws.readyState : null,
+                    timeSinceLastSeenMs: timeSinceLastSeen
+                });
+            }
+            
+            // Also include agents registered in Redis but not currently connected
+            let redisAgents = [];
+            if (this.redisClient) {
+                redisAgents = await this.redisClient.smembers(`${A2A_PREFIX}:agents`);
+            }
+            
+            const connectedAgentIds = new Set(this.agents.keys());
+            for (const redisAgentId of redisAgents) {
+                if (!connectedAgentIds.has(redisAgentId)) {
+                    // Agent in Redis but not connected - get last known status
+                    let agentData = {};
+                    if (this.redisClient) {
+                        agentData = await this.redisClient.hgetall(`${A2A_PREFIX}:agent:${redisAgentId}`);
+                    }
+                    
+                    agentStatus.push({
+                        agentId: redisAgentId,
+                        status: 'offline',
+                        lastSeen: agentData.lastSeen || null,
+                        registeredAt: agentData.registeredAt || null,
+                        metadata: {},
+                        websocketReadyState: null,
+                        timeSinceLastSeenMs: null
+                    });
+                }
+            }
+            
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                timestamp: new Date().toISOString(),
+                totalAgents: agentStatus.length,
+                onlineCount: agentStatus.filter(a => a.status === 'online').length,
+                offlineCount: agentStatus.filter(a => a.status === 'offline').length,
+                agents: agentStatus
+            }));
+            return;
+        }
+        
+        // GET /agent-status/{agentId} - specific agent status
+        if (specificAgentId && specificAgentId !== 'agent-status') {
+            const agent = this.agents.get(specificAgentId);
+            
+            if (!agent) {
+                // Check Redis for last known status
+                let redisData = {};
+                if (this.redisClient) {
+                    redisData = await this.redisClient.hgetall(`${A2A_PREFIX}:agent:${specificAgentId}`);
+                }
+                
+                if (Object.keys(redisData).length > 0) {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({
+                        agentId: specificAgentId,
+                        status: 'offline',
+                        lastSeen: redisData.lastSeen || null,
+                        registeredAt: redisData.registeredAt || null,
+                        metadata: redisData,
+                        websocketReadyState: null,
+                        note: 'Agent not currently connected, showing last known status from Redis'
+                    }));
+                } else {
+                    res.writeHead(404, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: `Agent ${specificAgentId} not found` }));
+                }
+                return;
+            }
+            
+            const now = Date.now();
+            const lastSeenTime = new Date(agent.lastSeen).getTime();
+            const timeSinceLastSeen = now - lastSeenTime;
+            const isOnline = agent.ws && agent.ws.readyState === WebSocket.OPEN && timeSinceLastSeen < (this.config.heartbeatInterval * 2);
+            
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                agentId: specificAgentId,
+                status: isOnline ? 'online' : 'offline',
+                lastSeen: agent.lastSeen,
+                registeredAt: agent.registeredAt,
+                metadata: agent.metadata,
+                websocketReadyState: agent.ws ? agent.ws.readyState : null,
+                timeSinceLastSeenMs: timeSinceLastSeen
+            }));
+            return;
+        }
     }
 
     /**

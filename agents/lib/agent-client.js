@@ -52,24 +52,45 @@ class GatewayClient {
         this.messageHandlers = new Map();
         this.pendingResponses = new Map();
         this.messageCounter = 0;
+        
+        // Heartbeat configuration
+        this.heartbeatInterval = config.heartbeatInterval || 30000; // 30 seconds
+        this.heartbeatTimer = null;
+        this.lastHeartbeatSent = null;
+        this.lastHeartbeatReceived = null;
     }
 
     /**
      * Connect to the Gateway
+     * @param {Object} options - Connection options
+     * @param {boolean} [options.enableHeartbeat=true] - Enable automatic heartbeat
+     * @param {string} [options.role] - Agent role for registration
+     * @param {Object} [options.metadata] - Additional metadata for registration
      * @returns {Promise<boolean>} Connection status
      */
-    async connect() {
+    async connect(options = {}) {
         if (this.connected) {
             return true;
         }
+
+        const { enableHeartbeat = true, role = null, metadata = {} } = options;
 
         return new Promise((resolve, reject) => {
             try {
                 this.ws = new WebSocket(this.gatewayUrl);
 
-                this.ws.on('open', () => {
+                this.ws.on('open', async () => {
                     console.log(`[GatewayClient] Connected to Gateway at ${this.gatewayUrl}`);
                     this.connected = true;
+                    
+                    // Register agent with gateway
+                    await this._registerAgent(role, metadata);
+                    
+                    // Start heartbeat if enabled
+                    if (enableHeartbeat) {
+                        this._startHeartbeat();
+                    }
+                    
                     resolve(true);
                 });
 
@@ -86,6 +107,7 @@ class GatewayClient {
                 this.ws.on('close', () => {
                     console.log('[GatewayClient] Gateway connection closed');
                     this.connected = false;
+                    this._stopHeartbeat();
                 });
 
                 // Connection timeout
@@ -99,6 +121,86 @@ class GatewayClient {
                 reject(error);
             }
         });
+    }
+
+    /**
+     * Register agent with the Gateway
+     * @private
+     * @param {string} role - Agent role
+     * @param {Object} metadata - Additional metadata
+     */
+    async _registerAgent(role, metadata) {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        const registrationMessage = {
+            type: 'register',
+            agentId: this.agentId,
+            timestamp: new Date().toISOString(),
+            metadata: {
+                role: role || 'general',
+                ...metadata
+            }
+        };
+
+        this.ws.send(JSON.stringify(registrationMessage));
+        console.log(`[GatewayClient] Registered agent ${this.agentId} with role ${role || 'general'}`);
+    }
+
+    /**
+     * Start automatic heartbeat to Gateway
+     * @private
+     */
+    _startHeartbeat() {
+        if (this.heartbeatTimer) {
+            this._stopHeartbeat();
+        }
+
+        console.log(`[GatewayClient] Starting heartbeat every ${this.heartbeatInterval}ms`);
+        
+        // Send initial heartbeat
+        this._sendHeartbeat();
+        
+        // Schedule regular heartbeats
+        this.heartbeatTimer = setInterval(() => {
+            this._sendHeartbeat();
+        }, this.heartbeatInterval);
+    }
+
+    /**
+     * Stop automatic heartbeat
+     * @private
+     */
+    _stopHeartbeat() {
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
+        }
+    }
+
+    /**
+     * Send heartbeat to Gateway
+     * @private
+     */
+    _sendHeartbeat() {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return;
+        }
+
+        const heartbeatMessage = {
+            type: 'ping',
+            agentId: this.agentId,
+            timestamp: new Date().toISOString(),
+            heartbeat: {
+                uptime: process.uptime(),
+                memoryUsage: process.memoryUsage(),
+                lastHeartbeatSent: this.lastHeartbeatSent
+            }
+        };
+
+        this.ws.send(JSON.stringify(heartbeatMessage));
+        this.lastHeartbeatSent = new Date().toISOString();
     }
 
     /**
@@ -178,10 +280,55 @@ class GatewayClient {
     }
 
     /**
+     * Handle pong response from Gateway (heartbeat acknowledgment)
+     * @private
+     * @param {Object} message - Pong message
+     */
+    _handlePong(message) {
+        this.lastHeartbeatReceived = new Date().toISOString();
+        console.log(`[GatewayClient] Heartbeat acknowledged for agent ${this.agentId}`);
+    }
+
+    /**
+     * Get heartbeat status
+     * @returns {Object} Heartbeat status information
+     */
+    getHeartbeatStatus() {
+        return {
+            agentId: this.agentId,
+            connected: this.connected,
+            lastHeartbeatSent: this.lastHeartbeatSent,
+            lastHeartbeatReceived: this.lastHeartbeatReceived,
+            heartbeatInterval: this.heartbeatInterval,
+            heartbeatActive: this.heartbeatTimer !== null,
+            uptime: process.uptime()
+        };
+    }
+
+    /**
+     * Get agent health information
+     * @returns {Object} Health information
+     */
+    getHealth() {
+        const now = new Date().toISOString();
+        const heartbeatStatus = this.getHeartbeatStatus();
+        
+        return {
+            agentId: this.agentId,
+            status: this.connected ? 'online' : 'offline',
+            timestamp: now,
+            heartbeat: heartbeatStatus,
+            memory: process.memoryUsage(),
+            uptime: process.uptime()
+        };
+    }
+
+    /**
      * Disconnect from Gateway
      */
     async disconnect() {
         if (this.ws) {
+            this._stopHeartbeat();
             this.ws.close();
             this.ws = null;
             this.connected = false;
@@ -557,10 +704,15 @@ You communicate with other agents through the OpenClaw Gateway WebSocket RPC pro
 
     /**
      * Connect to Gateway
+     * @param {Object} options - Connection options
+     * @param {boolean} [options.enableHeartbeat=true] - Enable automatic heartbeat
+     * @param {string} [options.role] - Agent role for registration (defaults to this.role)
+     * @param {Object} [options.metadata] - Additional metadata for registration
      * @returns {Promise<boolean>} Connection status
      */
-    async connect() {
-        return this.gatewayClient.connect();
+    async connect(options = {}) {
+        const { enableHeartbeat = true, role = this.role, metadata = {} } = options;
+        return this.gatewayClient.connect({ enableHeartbeat, role, metadata });
     }
 
     /**
@@ -576,6 +728,22 @@ You communicate with other agents through the OpenClaw Gateway WebSocket RPC pro
      */
     isConnected() {
         return this.gatewayClient.isConnected();
+    }
+
+    /**
+     * Get heartbeat status from GatewayClient
+     * @returns {Object} Heartbeat status information
+     */
+    getHeartbeatStatus() {
+        return this.gatewayClient.getHeartbeatStatus();
+    }
+
+    /**
+     * Get agent health information
+     * @returns {Object} Health information
+     */
+    getHealth() {
+        return this.gatewayClient.getHealth();
     }
 }
 
