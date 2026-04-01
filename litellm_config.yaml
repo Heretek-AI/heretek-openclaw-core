@@ -397,6 +397,147 @@ fallback_models:
   - zai/glm-5
 
 # ==============================================================================
+# Per-Agent Model Mappings
+# ==============================================================================
+# This section defines per-agent model configurations that override the default
+# model assignments. Each agent can have a primary model, fallback model, and
+# a chain of additional fallbacks for high availability.
+#
+# For detailed configuration files, see: config/agents/<agent>-models.yaml
+# ==============================================================================
+
+agent_model_mappings:
+  # -------------------------------------------------------------------------
+  # Arbiter - Decision maker / Conflict resolver
+  # -------------------------------------------------------------------------
+  arbiter:
+    primary: anthropic/claude-3-5-sonnet
+    fallback: openai/gpt-4-turbo
+    fallback_chain:
+      - openai/gpt-4o
+      - openai/gpt-4
+      - anthropic/claude-3-sonnet
+    max_tokens: 8192
+    temperature: 0.5
+    api_key_env: ANTHROPIC_API_KEY
+    budget_daily_usd: 25.00
+  
+  # -------------------------------------------------------------------------
+  # Coder - Code generation and review
+  # -------------------------------------------------------------------------
+  coder:
+    primary: anthropic/claude-3-5-sonnet
+    fallback: openai/gpt-4o
+    fallback_chain:
+      - openai/gpt-4-turbo
+      - anthropic/claude-3-5-haiku
+      - openai/gpt-4o-mini
+    max_tokens: 8192
+    temperature: 0.7
+    api_key_env: ANTHROPIC_API_KEY
+    budget_daily_usd: 50.00
+  
+  # -------------------------------------------------------------------------
+  # Steward - Orchestrator
+  # -------------------------------------------------------------------------
+  steward:
+    primary: minimax/MiniMax-M2.7
+    fallback: zai/glm-5-1
+    max_tokens: 8192
+    temperature: 0.7
+    budget_daily_usd: 20.00
+  
+  # -------------------------------------------------------------------------
+  # Alpha - Triad deliberator
+  # -------------------------------------------------------------------------
+  alpha:
+    primary: minimax/MiniMax-M2.7
+    fallback: anthropic/claude-3-5-sonnet
+    max_tokens: 8192
+    temperature: 0.7
+    budget_daily_usd: 15.00
+  
+  # -------------------------------------------------------------------------
+  # Beta - Triad deliberator
+  # -------------------------------------------------------------------------
+  beta:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o
+    max_tokens: 8192
+    temperature: 0.7
+    budget_daily_usd: 15.00
+  
+  # -------------------------------------------------------------------------
+  # Charlie - Triad deliberator
+  # -------------------------------------------------------------------------
+  charlie:
+    primary: minimax/MiniMax-M2.7
+    fallback: anthropic/claude-3-5-haiku
+    max_tokens: 8192
+    temperature: 0.7
+    budget_daily_usd: 15.00
+  
+  # -------------------------------------------------------------------------
+  # Examiner - Interrogator / Challenger
+  # -------------------------------------------------------------------------
+  examiner:
+    primary: anthropic/claude-3-5-sonnet
+    fallback: openai/gpt-4-turbo
+    max_tokens: 4096
+    temperature: 0.4
+    budget_daily_usd: 20.00
+  
+  # -------------------------------------------------------------------------
+  # Explorer - Scout / Opportunity finder
+  # -------------------------------------------------------------------------
+  explorer:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o-mini
+    max_tokens: 4096
+    temperature: 0.8
+    budget_daily_usd: 10.00
+  
+  # -------------------------------------------------------------------------
+  # Sentinel - Guardian / Security
+  # -------------------------------------------------------------------------
+  sentinel:
+    primary: minimax/MiniMax-M2.7
+    fallback: anthropic/claude-3-haiku
+    max_tokens: 4096
+    temperature: 0.3
+    budget_daily_usd: 10.00
+  
+  # -------------------------------------------------------------------------
+  # Dreamer - Visionary / Creative
+  # -------------------------------------------------------------------------
+  dreamer:
+    primary: openai/gpt-4-turbo
+    fallback: anthropic/claude-3-5-sonnet
+    max_tokens: 8192
+    temperature: 0.9
+    budget_daily_usd: 15.00
+  
+  # -------------------------------------------------------------------------
+  # Empath - Diplomat / Emotional intelligence
+  # -------------------------------------------------------------------------
+  empath:
+    primary: anthropic/claude-3-5-sonnet
+    fallback: openai/gpt-4o
+    max_tokens: 4096
+    temperature: 0.8
+    budget_daily_usd: 10.00
+  
+  # -------------------------------------------------------------------------
+  # Historian - Archivist / Memory keeper
+  # -------------------------------------------------------------------------
+  historian:
+    primary: minimax/MiniMax-M2.7
+    fallback: openai/gpt-4o
+    max_tokens: 8192
+    temperature: 0.3
+    budget_daily_usd: 10.00
+
+# ==============================================================================
 # Budget & Rate Limits (Per Agent)
 # ==============================================================================
 budget_settings:
@@ -412,6 +553,10 @@ budget_settings:
     agent/explorer: 300000
     agent/sentinel: 300000
     agent/coder: 1000000
+    agent/arbiter: 800000
+    agent/dreamer: 500000
+    agent/empath: 400000
+    agent/historian: 500000
   
   # Global budget
   global_budget: 5000000
@@ -423,25 +568,79 @@ budget_settings:
 # Observability Settings
 # ==============================================================================
 observability:
-  # Prometheus metrics
+  # -------------------------------------------------------------------------
+  # Prometheus Metrics
+  # -------------------------------------------------------------------------
   prometheus:
     enabled: true
-    port: 9090
+    port: 4000  # Exposed on main LiteLLM port at /metrics
+    # Metrics available:
+    # - litellm_cost_dollars_total{model, agent}
+    # - litellm_tokens_total{model, type=input/output}
+    # - litellm_request_count_total{model, status}
+    # - litellm_request_latency_seconds{model}
+    # - litellm_deployment_failure_responses{model}
   
-  # Langfuse tracing
+  # -------------------------------------------------------------------------
+  # Langfuse Tracing (LLM Observability)
+  # -------------------------------------------------------------------------
   langfuse:
     enabled: true
     public_key: os.environ/LANGFUSE_PUBLIC_KEY
     secret_key: os.environ/LANGFUSE_SECRET_KEY
     host: os.environ/LANGFUSE_HOST
+    # Trace all LLM calls with costs, latencies, and user sessions
+    # Access dashboard at http://localhost:3000
   
-  # OpenTelemetry tracing
+  # -------------------------------------------------------------------------
+  # OpenTelemetry Tracing (Distributed Tracing)
+  # -------------------------------------------------------------------------
   opentelemetry:
     enabled: true
-    exporter: os.environ/OTEL_EXPORTER_TYPE
+    exporter: os.environ/OTEL_EXPORTER_TYPE  # otlp, jaeger, zipkin
     endpoint: os.environ/OTEL_EXPORTER_OTLP_ENDPOINT
   
-  # Slack alerts (optional)
+  # -------------------------------------------------------------------------
+  # LiteLLM WebUI (Built-in Admin Dashboard)
+  # -------------------------------------------------------------------------
+  # Access at http://localhost:4000/ui
+  # Features:
+  # - Cost tracking per model/key/user
+  # - Token usage analytics
+  # - Budget management and alerts
+  # - Key management
+  # - Spend reports
+  ui:
+    enabled: true
+    access_mode: admin  # Requires master key authentication
+  
+  # -------------------------------------------------------------------------
+  # Cost Tracking & Budget Alerts
+  # -------------------------------------------------------------------------
+  cost_tracking:
+    enabled: true
+    # Track spend by agent passthrough endpoints
+    track_agent_costs: true
+    # Alert thresholds (percentage of budget)
+    alert_threshold_warning: 0.8   # 80% - warning
+    alert_threshold_critical: 1.0  # 100% - budget exceeded
+  
+  # -------------------------------------------------------------------------
+  # Slack/Webhook Alerts (Optional)
+  # -------------------------------------------------------------------------
   slack:
     enabled: false
     webhook_url: os.environ/SLACK_WEBHOOK_URL
+    # Alert channels for budget warnings, failures, etc.
+  
+  # -------------------------------------------------------------------------
+  # Health Dashboard Integration
+  # -------------------------------------------------------------------------
+  # Metrics exposed for external dashboards:
+  # - GET /metrics (Prometheus format)
+  # - GET /spend (JSON spend data)
+  # - GET /budget/list (Budget statuses)
+  health_dashboard:
+    enabled: true
+    # Expose metrics for Heretek OpenClaw Health Dashboard
+    # Dashboard collects metrics every 30 seconds
