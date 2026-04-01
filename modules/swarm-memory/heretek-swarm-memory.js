@@ -16,6 +16,7 @@ class HeretekSwarmMemory {
     });
     
     this.consciousnessLevels = ['GWT', 'IIT', 'AST', 'intrinsic'];
+    this.lineageGraph = new Map(); // In-memory causal graph
   }
 
   /**
@@ -26,6 +27,22 @@ class HeretekSwarmMemory {
    */
   async share(agentId, memory, requiresTriadConsensus = false) {
     const memoryId = `mem:${Date.now()}:${agentId}`;
+    
+    // Add lineage tracking (Langroid pattern)
+    const lineage = {
+      parentId: memory.parentId || null,
+      timestamp: Date.now(),
+      agentId,
+      depth: memory.parentId ? (this.getLineageDepth(memory.parentId) + 1) : 0
+    };
+    
+    // Update causal graph
+    this.lineageGraph.set(memoryId, lineage);
+    if (memory.parentId) {
+      const parentChildren = this.lineageGraph.get(memory.parentId)?.children || [];
+      parentChildren.push(memoryId);
+      this.lineageGraph.set(memory.parentId, { ...this.lineageGraph.get(memory.parentId), children: parentChildren });
+    }
     
     // High-value memories require triad approval
     if (requiresTriadConsensus || memory.accessibility === 'swarm') {
@@ -51,7 +68,8 @@ class HeretekSwarmMemory {
       accessibility: memory.accessibility || 'triad',
       consciousnessLevel: memory.consciousnessLevel || 'none',
       consciousnessMarkers: JSON.stringify(memory.consciousnessMarkers || []),
-      tags: JSON.stringify(memory.tags || [])
+      tags: JSON.stringify(memory.tags || []),
+      lineage: JSON.stringify(lineage)
     });
 
     // Set TTL based on memory type
@@ -72,7 +90,44 @@ class HeretekSwarmMemory {
       timestamp: Date.now()
     }));
 
-    return { memoryId, success: true };
+    return { memoryId, success: true, lineage };
+  }
+
+  /**
+   * Get lineage depth for a memory
+   */
+  getLineageDepth(memoryId) {
+    const lineage = this.lineageGraph.get(memoryId);
+    if (!lineage || !lineage.parentId) return 0;
+    return this.getLineageDepth(lineage.parentId) + 1;
+  }
+
+  /**
+   * Rewind to before a specific message (Langroid-style debugging)
+   * @param {string} memoryId - Memory to rewind from
+   * @returns {Promise<Array>} Prior memories in causal chain
+   */
+  async rewind(memoryId) {
+    const lineage = this.lineageGraph.get(memoryId);
+    if (!lineage) return [];
+    
+    const priorMemories = [];
+    let currentId = lineage.parentId;
+    
+    while (currentId) {
+      const data = await this.redis.hgetall(`swarm:memory:${currentId}`);
+      if (data) {
+        priorMemories.push({
+          memoryId: currentId,
+          content: JSON.parse(data.content),
+          lineage: JSON.parse(data.lineage || '{}')
+        });
+      }
+      const parentLineage = this.lineageGraph.get(currentId);
+      currentId = parentLineage?.parentId || null;
+    }
+    
+    return priorMemories;
   }
 
   /**
