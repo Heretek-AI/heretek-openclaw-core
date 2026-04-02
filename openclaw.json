@@ -547,7 +547,7 @@
       "litellm": {
         "baseUrl": "http://localhost:4000",
         "api": "openai-completions",
-        "apiKey": "sk-vdZ6kjYH1_Z8DldpzriERQ",
+        "apiKey": "sk-#######",
         "models": [
           {
             "id": "minimax/MiniMax-M2.7",
