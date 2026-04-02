@@ -224,7 +224,7 @@
     "mode": "local",
     "auth": {
       "mode": "token",
-      "token": "9b54947854ee05186fb5363d0ea113685794d08d4ab45f80"
+      "token": "${GATEWAY_TOKEN}"
     },
     "port": 18789,
     "bind": "lan",
@@ -273,8 +273,8 @@
         "config": {
           "vector": {
             "type": "pgvector",
-            "connectionString": "postgres://heretek:zHNb5MMUOWEHWcv8pHTOpl+hwoLCAi1v@127.0.0.1:5432/heretek",
-            "embeddingModel": "qwen3-embedding:8b",
+            "connectionString": "${DATABASE_URL}",
+            "embeddingModel": "${EMBEDDING_MODEL:-qwen3-embedding:8b}",
             "dimensions": 1536,
             "collection": "openclaw_documents"
           },
@@ -547,17 +547,19 @@
       "litellm": {
         "baseUrl": "http://localhost:4000",
         "api": "openai-completions",
-        "apiKey": "sk-vdZ6kjYH1_Z8DldpzriERQ",
+        "apiKey": "sk-########",
         "models": [
           {
             "id": "minimax/MiniMax-M2.7",
             "name": "MiniMax M2.7",
             "reasoning": true,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
-              "input": 0.000015,
-              "output": 0.000075,
-              "cacheRead": 0.000003,
+              "input": 1.5e-05,
+              "output": 7.5e-05,
+              "cacheRead": 3e-06,
               "cacheWrite": 0
             },
             "contextWindow": 200000,
@@ -567,7 +569,9 @@
             "id": "agent/steward",
             "name": "Steward Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -581,7 +585,9 @@
             "id": "agent/alpha",
             "name": "Alpha Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -595,7 +601,9 @@
             "id": "agent/beta",
             "name": "Beta Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -609,7 +617,9 @@
             "id": "agent/charlie",
             "name": "Charlie Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -623,7 +633,9 @@
             "id": "agent/examiner",
             "name": "Examiner Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -637,7 +649,9 @@
             "id": "agent/explorer",
             "name": "Explorer Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -651,7 +665,9 @@
             "id": "agent/sentinel",
             "name": "Sentinel Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -665,7 +681,9 @@
             "id": "agent/sentinel-prime",
             "name": "Sentinel Prime Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -679,7 +697,9 @@
             "id": "agent/coder",
             "name": "Coder Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -693,7 +713,9 @@
             "id": "agent/dreamer",
             "name": "Dreamer Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -707,7 +729,9 @@
             "id": "agent/empath",
             "name": "Empath Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -721,7 +745,9 @@
             "id": "agent/historian",
             "name": "Historian Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -735,7 +761,9 @@
             "id": "agent/arbiter",
             "name": "Arbiter Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -749,7 +777,9 @@
             "id": "agent/catalyst",
             "name": "Catalyst Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -763,7 +793,9 @@
             "id": "agent/chronos",
             "name": "Chronos Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -777,7 +809,9 @@
             "id": "agent/coordinator",
             "name": "Coordinator Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -791,7 +825,9 @@
             "id": "agent/echo",
             "name": "Echo Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -805,7 +841,9 @@
             "id": "agent/habit-forge",
             "name": "Habit Forge Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -819,7 +857,9 @@
             "id": "agent/metis",
             "name": "Metis Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -833,7 +873,9 @@
             "id": "agent/nexus",
             "name": "Nexus Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -847,7 +889,9 @@
             "id": "agent/perceiver",
             "name": "Perceiver Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -861,7 +905,9 @@
             "id": "agent/prism",
             "name": "Prism Agent",
             "reasoning": false,
-            "input": ["text"],
+            "input": [
+              "text"
+            ],
             "cost": {
               "input": 0,
               "output": 0,
@@ -907,13 +953,13 @@
     }
   },
   "wizard": {
-    "lastRunAt": "2026-04-01T18:09:57.256Z",
-    "lastRunVersion": "2026.3.31",
-    "lastRunCommand": "onboard",
-    "lastRunMode": "local"
+    "lastRunAt": null,
+    "lastRunVersion": null,
+    "lastRunCommand": null,
+    "lastRunMode": null
   },
   "meta": {
-    "lastTouchedVersion": "2026.3.31",
-    "lastTouchedAt": "2026-04-02T10:24:00.805Z"
+    "lastTouchedVersion": "${OPENCLAW_VERSION}",
+    "lastTouchedAt": null
   }
 }
