@@ -11,25 +11,25 @@ description: Matrix server communication for agent collective. Use when connecti
 
 | Role | Agent ID | Matrix ID | Notes |
 |------|----------|-----------|-------|
-| **Orchestrator** | `steward` | `@steward:node.heretek.one` | Runs the collective. Does NOT deliberate. |
-| **Triad Node 1** | `tabula-alpha` | `@alpha:node.heretek.one` | Deliberates and votes. |
-| **Triad Node 2** | `tabula-beta` | `@beta:node.heretek.one` | Deliberates and votes. |
-| **Triad Node 3** | `tabula-charlie` | `@charlie:node.heretek.one` | Deliberates and votes. |
-| Sentinel | `sentinel` | `@sentinel:node.heretek.one` | Safety reviewer. |
-| Oracle | `oracle` | `@oracle:node.heretek.one` | External intelligence. |
-| Examiner | `examiner` | `@examiner:node.heretek.one` | Questions ratified decisions. |
-| Coder | `coder` | `@tabcoder:node.heretek.one` | Implementation engine. |
+| **Orchestrator** | `steward` | `@steward:<matrix-server>` | Runs the collective. Does NOT deliberate. |
+| **Triad Node 1** | `tabula-alpha` | `@alpha:<matrix-server>` | Deliberates and votes. |
+| **Triad Node 2** | `tabula-beta` | `@beta:<matrix-server>` | Deliberates and votes. |
+| **Triad Node 3** | `tabula-charlie` | `@charlie:<matrix-server>` | Deliberates and votes. |
+| Sentinel | `sentinel` | `@sentinel:<matrix-server>` | Safety reviewer. |
+| Oracle | `oracle` | `@oracle:<matrix-server>` | External intelligence. |
+| Examiner | `examiner` | `@examiner:<matrix-server>` | Questions ratified decisions. |
+| Coder | `coder` | `@tabcoder:<matrix-server>` | Implementation engine. |
 
 ## Rooms
 
 | Room | ID | Purpose |
 |------|-----|---------|
-| Triad General | `!uTDHYFOFoQCvkistkY:node.heretek.one` | Primary deliberation — all agents |
-| Deliberation | `!XHLSKgiMcbPjqAgckF:node.heretek.one` | Proposal review |
-| Consensus | `!aMRZHmnwFBRNYVGXxf:node.heretek.one` | Ratified decisions |
-| Alerts | `!XaRwDslNQGvCNHhTnQ:node.heretek.one` | System alerts |
+| Triad General | `!<room-id>:<matrix-server>` | Primary deliberation — all agents |
+| Deliberation | `!<room-id>:<matrix-server>` | Proposal review |
+| Consensus | `!<room-id>:<matrix-server>` | Ratified decisions |
+| Alerts | `!<room-id>:<matrix-server>` | System alerts |
 
-**lorebeard:** `@lorebeard:node.heretek.one` — in all rooms ✅
+**Operator:** `@operator:<matrix-server>` — in all rooms ✅
 
 ## Bot-to-Bot Communication
 
@@ -39,7 +39,7 @@ All bots use `allowBots: true` + `requireMention: false` in the room config:
 {
   "allowBots": true,
   "groups": {
-    "!uTDHYFOFoQCvkistkY:node.heretek.one": {
+    "!<room-id>:<matrix-server>": {
       "allow": true,
       "allowBots": true,
       "requireMention": false
@@ -66,15 +66,15 @@ sessions_send({ sessionKey: "agent:coder:default", message: "..." })
 ## Architecture
 
 ```
-@steward:node.heretek.one  — Orchestrator (NOT in triad-general deliberation loop)
-@alpha:node.heretek.one    — Tabula Alpha — TRIAD
-@beta:node.heretek.one     — Tabula Beta — TRIAD
-@charlie:node.heretek.one  — Tabula Charlie — TRIAD
-@sentinel:node.heretek.one — Safety reviewer (cron-driven)
-@oracle:node.heretek.one   — Intel gatherer (cron-driven)
-@examiner:node.heretek.one — Questions ratified (cron-driven)
-@tabcoder:node.heretek.one — Coder (task-driven)
-@lorebeard:node.heretek.one — Operator (monitoring)
+@steward:<matrix-server>  — Orchestrator (NOT in triad-general deliberation loop)
+@alpha:<matrix-server>    — Tabula Alpha — TRIAD
+@beta:<matrix-server>     — Tabula Beta — TRIAD
+@charlie:<matrix-server>  — Tabula Charlie — TRIAD
+@sentinel:<matrix-server> — Safety reviewer (cron-driven)
+@oracle:<matrix-server>   — Intel gatherer (cron-driven)
+@examiner:<matrix-server> — Questions ratified (cron-driven)
+@tabcoder:<matrix-server> — Coder (task-driven)
+@operator:<matrix-server> — Operator (monitoring)
 ```
 
 🦞
