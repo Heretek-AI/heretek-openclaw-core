@@ -1,0 +1,39 @@
+{
+  "name": "@heretek/provider-abstraction",
+  "version": "1.0.0",
+  "description": "Heretek Provider Abstraction Layer with triad-aware routing, consensus-based failover, and cost optimization across 17+ providers",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "jest",
+    "lint": "eslint src/",
+    "install-providers": "node scripts/install-providers.js",
+    "configure": "node scripts/configure-provider.js",
+    "status": "node scripts/provider-status.js",
+    "optimize": "node scripts/cost-optimizer.js"
+  },
+  "keywords": [
+    "heretek",
+    "provider",
+    "llm",
+    "triad",
+    "consensus",
+    "failover",
+    "cost-optimization"
+  ],
+  "author": "The Collective",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0",
+    "ioredis": "^5.3.0",
+    "pg": "^8.11.0",
+    "winston": "^3.11.0",
+    "dotenv": "^16.3.0",
+    "uuid": "^9.0.0",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.54.0"
+  }
+}
