@@ -1,0 +1,30 @@
+{
+  "$schema": "https://docs.openclaw.ai/schema/openclaw-agent.json",
+  "version": "1.0.0",
+  "agent": {
+    "id": "steward",
+    "name": "steward",
+    "role": "steward",
+    "description": "Agent description",
+    "model": "llama3.1",
+    "session": "agent:namespace:default"
+  },
+  "capabilities": [
+    "capability_1",
+    "capability_2"
+  ],
+  "skills": [
+    "skill_1",
+    "skill_2"
+  ],
+  "parameters": {
+    "param_1": "value_1",
+    "param_2": "value_2"
+  },
+  "environment": {
+    "AGENT_NAME": "${AGENT_NAME}",
+    "AGENT_ROLE": "${AGENT_ROLE}",
+    "LITELLM_HOST": "${LITELLM_HOST:-http://localhost:4000}",
+    "LITELLM_API_KEY": "${LITELLM_MASTER_KEY}"
+  }
+}
