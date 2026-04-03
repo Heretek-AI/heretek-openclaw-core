@@ -232,7 +232,15 @@ class BFTConsensus {
     const subscriber = this.redis.duplicate();
     
     subscriber.subscribe('bft:consensus', async (message) => {
-      const msg = JSON.parse(message);
+      // Skip Redis subscription confirmation strings (not JSON)
+      if (!message || typeof message !== 'string') return;
+      let msg;
+      try {
+        msg = JSON.parse(message);
+      } catch {
+        // Not JSON — skip (Redis subscription confirmation)
+        return;
+      }
       await this.handleMessage(msg);
     });
     
