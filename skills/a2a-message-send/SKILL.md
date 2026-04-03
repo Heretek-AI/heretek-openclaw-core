@@ -1,52 +1,33 @@
+---
+name: a2a-message-send
+description: Send agent-to-agent (A2A) messages via Redis pub/sub with optional ACP WebSocket delivery. Use when agents need to communicate, broadcast to the triad, or check agent health. Compatible with the npm OpenClaw gateway.
+---
+
 # A2A Message Send Skill
 
-**Version:** 1.0.0  
-**Type:** Communication  
-**Backend:** Redis
-
-## Overview
-
-Provides agent-to-agent (A2A) communication capabilities for the OpenClaw collective via Redis pub/sub messaging. This skill enables agents to send messages, broadcast to groups, manage inboxes, and perform health checks.
+Send messages between collective agents via Redis queues (npm gateway compatible) with optional real-time delivery via ACP WebSocket.
 
 ## Architecture
 
 ```
-┌─────────────┐     Redis      ┌─────────────┐
-│   Agent A   │ ◄───────────► │    Redis    │
-│  (steward)  │    Pub/Sub    │   :6379     │
-├─────────────┤               │  Lists +    │
-│   Agent B   │ ◄───────────► │   Sets      │
-│   (alpha)   │    Redis      └─────────────┘
-└─────────────┘    Commands
+Agent --> a2a-redis.js --> Redis (openclaw:a2a:inbox:{agentId})
+                         |
+                         +--> ACP Adapter (optional) --> npm Gateway (port 18789)
+
+npm Gateway reads from same Redis keys for agent delivery.
 ```
 
-### Redis Data Structures
+**Redis prefix:** `openclaw:a2a:` (shared with npm gateway — no migration needed)
 
-- `openclaw:a2a:inbox:{agentId}` - List storing messages for each agent
-- `openclaw:a2a:agents` - Set of registered agent IDs
-- `openclaw:a2a:agent:{agentId}` - Hash with agent metadata
-- `openclaw:a2a:broadcast` - Pub/sub channel for broadcasts
-- `openclaw:a2a:read:{agentId}` - Set of read message IDs
-
-## Installation
-
-### Prerequisites
-
-- Redis server running and accessible
-- Node.js 18+
-- `ioredis` package installed
-
-### Setup
+## Configuration
 
 ```bash
-# Install dependency
-npm install ioredis
+# Redis (required)
+REDIS_URL=redis://localhost:6379
 
-# Set environment variables
-export REDIS_URL=redis://localhost:6379
-# Or
-export REDIS_HOST=localhost
-export REDIS_PORT=6379
+# ACP WebSocket (optional — for real-time delivery)
+OPENCLAW_GATEWAY_TOKEN=9b54947854ee05186fb5363d0ea113685794d08d4ab45f80
+OPENCLAW_GATEWAY_WS=ws://localhost:18789/a2a
 ```
 
 ## Usage
@@ -54,50 +35,45 @@ export REDIS_PORT=6379
 ### Basic Messaging
 
 ```javascript
-const { sendMessage, getMessages } = require('./skills/a2a-message-send/a2a-redis.js');
+const { sendMessage, getMessages, connectACP } = require('./a2a-redis.js');
 
-// Send a message from steward to alpha
-const result = await sendMessage('steward', 'alpha', 'Hello Alpha!');
-console.log(result);
-// { success: true, messageId: 'msg_...', from: 'steward', to: 'alpha', ... }
+// Send a message (always works — Redis queue)
+const result = await sendMessage('steward', 'alpha', 'Triad meeting now');
+// → { success: true, messageId: 'msg_1743...', from: 'steward', to: 'alpha' }
 
-// Get messages from alpha's inbox
+// Get inbox messages
 const messages = await getMessages('alpha', 10);
-console.log(messages);
-// [{ messageId, from, to, content, timestamp, ... }, ...]
+
+// Mark as read
+await markAsRead('alpha', 'msg_1743...');
 ```
 
-### Broadcasting
+### Real-Time via ACP
 
 ```javascript
-const { broadcast, broadcastToTriad, broadcastToAgents } = require('./a2a-redis.js');
+// Connect to npm gateway for real-time delivery
+const acp = await connectACP({ agentId: 'alpha' });
 
-// Broadcast to all agents
-const result = await broadcast('steward', 'Meeting in 5 minutes!');
+// Now messages go via WebSocket when agent is online
+const result = await sendMessage('steward', 'alpha', 'Urgent!', { via: 'acp' });
+// → { success: true, acpDelivered: true }
 
-// Broadcast to triad only
-const triadResult = await broadcastToTriad('coordinator', 'Triad deliberation needed');
+// Listen for incoming messages
+acp.on('message', (msg) => {
+  console.log(`${msg.from}: ${msg.content}`);
+});
 
-// Broadcast to specific agents
-const customResult = await broadcastToAgents('steward', ['alpha', 'beta', 'coder'], 'Task update');
+// Disconnect
+await disconnectACP();
 ```
 
-### Inbox Management
+### Broadcast to Triad
 
 ```javascript
-const { getMessages, countMessages, clearMessages, markAsRead, getUnreadMessages } = require('./a2a-redis.js');
+const { broadcastToTriad } = require('./a2a-redis.js');
 
-// Count messages
-const { count } = await countMessages('alpha');
-
-// Get unread messages only
-const unread = await getUnreadMessages('alpha', 10);
-
-// Mark message as read
-await markAsRead('alpha', 'msg_123');
-
-// Clear all messages
-await clearMessages('alpha');
+await broadcastToTriad('steward', 'Phase 3 deliberation starting');
+// → { success: true, sentTo: ['alpha', 'beta', 'charlie'], count: 3 }
 ```
 
 ### Health Checks
@@ -105,178 +81,66 @@ await clearMessages('alpha');
 ```javascript
 const { pingAgent, pingTriad } = require('./a2a-redis.js');
 
-// Ping a single agent
-const pingResult = await pingAgent('steward', 'alpha');
-console.log(pingResult);
-// { success: true, response: 'pong', latency: 5, target: 'alpha', registered: true }
+// Ping single agent
+const result = await pingAgent('steward', 'alpha');
+// → { success: true, response: 'pong', latency: 2, target: 'alpha', registered: true }
 
 // Ping all triad members
-const triadPing = await pingTriad('steward');
-console.log(triadPing.responses);
-// { alpha: {...}, beta: {...}, charlie: {...} }
+const triad = await pingTriad('steward');
+// → { success: true, responses: { alpha: {...}, beta: {...}, charlie: {...} } }
 ```
 
 ### Agent Registration
 
 ```javascript
-const { registerAgent, unregisterAgent, getRegisteredAgents } = require('./a2a-redis.js');
+const { registerAgent, getRegisteredAgents, unregisterAgent } = require('./a2a-redis.js');
 
-// Register an agent
-await registerAgent('steward', { role: 'orchestrator', capabilities: ['coordinate', 'delegate'] });
+// Register as active
+await registerAgent('alpha', { role: 'triad', skills: ['deliberate', 'vote'] });
 
-// Get all registered agents
+// List all registered agents
 const agents = await getRegisteredAgents();
-console.log(agents);
-// ['steward', 'alpha', 'beta', ...]
+// → ['steward', 'alpha', 'beta', 'charlie', ...]
 
-// Unregister an agent
-await unregisterAgent('steward');
+// Unregister
+await unregisterAgent('alpha');
 ```
 
-## API Reference
+## Redis Key Reference
 
-### Core Functions
-
-| Function | Description | Parameters | Returns |
-|----------|-------------|------------|---------|
-| `sendMessage(from, to, content, options)` | Send message to agent | `from`: sender ID, `to`: recipient ID, `content`: message, `options`: {priority, type, metadata} | `{success, messageId, from, to, timestamp}` |
-| `getMessages(agentId, limit)` | Get messages from inbox | `agentId`: recipient ID, `limit`: max messages | `Array<Message>` |
-| `getUnreadMessages(agentId, limit)` | Get unread messages | `agentId`: recipient ID, `limit`: max messages | `Array<Message>` |
-| `markAsRead(agentId, messageId)` | Mark message as read | `agentId`: owner ID, `messageId`: ID to mark | `{success, agentId, messageId}` |
-| `countMessages(agentId)` | Count inbox messages | `agentId`: owner ID | `{count, agentId}` |
-| `clearMessages(agentId)` | Clear all messages | `agentId`: owner ID | `{success, agentId}` |
-
-### Broadcast Functions
-
-| Function | Description | Parameters | Returns |
-|----------|-------------|------------|---------|
-| `broadcast(from, content)` | Broadcast to all agents | `from`: sender ID, `content`: message | `{success, from, count, timestamp}` |
-| `broadcastToAll(from, content)` | Alias for broadcast | Same as broadcast | Same as broadcast |
-| `broadcastToAgents(from, agents, content)` | Broadcast to specific agents | `from`: sender ID, `agents`: array, `content`: message | `{success, from, sentTo, count}` |
-| `broadcastToTriad(from, content)` | Broadcast to triad | `from`: sender ID, `content`: message | `{success, from, recipients, count}` |
-
-### Health Check Functions
-
-| Function | Description | Parameters | Returns |
-|----------|-------------|------------|---------|
-| `pingAgent(from, to)` | Ping an agent | `from`: sender ID, `to`: target ID | `{success, response, latency, target, registered}` |
-| `pingTriad(from)` | Ping all triad members | `from`: sender ID | `{success, from, responses, timestamp}` |
-
-### Validation Functions
-
-| Function | Description | Parameters | Returns |
-|----------|-------------|------------|---------|
-| `validateMessage(message)` | Validate message format | `message`: message object | `{valid, errors}` |
-| `validateAgentId(agentId)` | Validate agent ID format | `agentId`: ID to validate | `boolean` |
-
-### Agent Registration Functions
-
-| Function | Description | Parameters | Returns |
-|----------|-------------|------------|---------|
-| `registerAgent(agentId, metadata)` | Register an agent | `agentId`: ID, `metadata`: optional info | `{success, agentId, timestamp}` |
-| `unregisterAgent(agentId)` | Unregister an agent | `agentId`: ID to remove | `{success, agentId}` |
-| `getRegisteredAgents()` | Get all registered agents | None | `Array<string>` |
-
-### Connection Management
-
-| Function | Description | Parameters | Returns |
-|----------|-------------|------------|---------|
-| `getRedisClient()` | Get Redis client instance | None | `Redis` client |
-| `closeRedisClient()` | Close Redis connection | None | `Promise<void>` |
+| Key | Type | Purpose |
+|-----|------|---------|
+| `openclaw:a2a:inbox:{agentId}` | List | Message queue per agent |
+| `openclaw:a2a:agents` | Set | Registered agent IDs |
+| `openclaw:a2a:agent:{agentId}` | Hash | Agent metadata |
+| `openclaw:a2a:broadcast` | Pub/Sub | Real-time broadcast channel |
+| `openclaw:a2a:read:{agentId}` | Set | Read message IDs |
 
 ## Message Format
 
 ```javascript
 {
-    messageId: 'msg_1712000000000_abc123',  // Unique message ID
-    from: 'steward',                          // Sender agent ID
-    to: 'alpha',                              // Recipient agent ID
-    content: 'Hello!',                        // Message content (string or JSON)
-    timestamp: '2026-04-01T12:00:00.000Z',   // ISO 8601 timestamp
-    priority: 'normal',                       // 'low', 'normal', 'high', 'urgent'
-    type: 'task',                             // 'task', 'query', 'response', 'broadcast'
-    inReplyTo: 'msg_...',                     // Original message ID (for responses)
-    metadata: {}                              // Custom metadata
+  messageId: 'msg_1743...',
+  from: 'steward',
+  to: 'alpha',
+  content: 'Triad meeting now',
+  timestamp: '2026-04-03T01:00:00.000Z',
+  priority: 'normal',
+  type: 'task'
 }
 ```
 
-## Known Agents
+## Migration Notes
 
-The following agents are pre-registered in the OpenClaw collective:
+This skill was originally written for the archived `gateway/openclaw-gateway.js` (simple JSON WebSocket protocol). It has been migrated:
 
-- **steward** - Orchestrator
-- **alpha, beta, charlie** - Triad (deliberation)
-- **examiner** - Interrogator
-- **explorer** - Scout
-- **sentinel, sentinel-prime** - Guardian
-- **coder** - Artisan
-- **dreamer** - Visionary
-- **empath** - Diplomat
-- **historian** - Archivist
-- **arbiter** - Adjudicator
-- **catalyst** - Accelerator
-- **chronos** - Timekeeper
-- **coordinator** - Integrator
-- **echo** - Communicator
-- **habit-forge** - Optimizer
-- **metis** - Strategist
-- **nexus** - Connector
-- **perceiver** - Sensor
-- **prism** - Analyzer
+- ✅ Redis key space (`openclaw:a2a:*`) is identical to npm gateway — **no data migration needed**
+- ✅ ACP adapter added for real-time WebSocket delivery when connected to npm gateway
+- ✅ Fallback to Redis queue always works (npm gateway uses same keys)
+- ⚠️ If using ACP real-time delivery, both agents must be ACP-connected
 
-## Error Handling
-
-All functions return a result object with a `success` flag. When `success` is `false`, an `error` property contains the error message.
-
-```javascript
-const result = await sendMessage('steward', 'invalid-agent', 'Test');
-if (!result.success) {
-    console.error('Send failed:', result.error);
-    // Handle error
-}
-```
-
-### Common Errors
-
-- `Invalid sender agent ID` - Sender ID doesn't match expected format
-- `Invalid recipient agent ID` - Recipient ID doesn't match expected format
-- `Redis connection failed` - Cannot connect to Redis server
-- `Invalid message` - Message validation failed
-
-## Testing
-
-Run the test suite:
+## Dependencies
 
 ```bash
-# Run A2A message send tests
-node --test tests/skills/a2a-message-send.test.js
-
-# Run integration tests
-npm run test:integration
+npm install ioredis ws
 ```
-
-## Integration with Agent Client
-
-The `agent-client.js` library automatically uses this skill for A2A communication when Redis is available:
-
-```javascript
-const AgentClient = require('./agents/lib/agent-client');
-const client = new AgentClient({
-    agentId: 'steward',
-    role: 'orchestrator',
-    gatewayUrl: 'ws://localhost:18789'
-});
-
-// Send message (uses Redis backend)
-await client.sendMessage('alpha', { task: 'Analyze this' });
-
-// Broadcast
-await client.broadcast('Attention all agents!');
-```
-
-## See Also
-
-- [`../modules/communication/redis-websocket-bridge.js`](../modules/communication/redis-websocket-bridge.js) - Redis to WebSocket bridge
-- [`../gateway/openclaw-gateway.js`](../gateway/openclaw-gateway.js) - OpenClaw Gateway server
-- [`../../agents/lib/agent-client.js`](../../agents/lib/agent-client.js) - Agent client library
-- [`../../tests/skills/a2a-message-send.test.js`](../../tests/skills/a2a-message-send.test.js) - Test suite
