@@ -7,6 +7,7 @@
 
 const { Redis } = require('ioredis');
 const { Pool } = require('pg');
+const fetch = require('node-fetch');
 
 class HeretekSwarmMemory {
   constructor(options = {}) {
@@ -17,6 +18,12 @@ class HeretekSwarmMemory {
     
     this.consciousnessLevels = ['GWT', 'IIT', 'AST', 'intrinsic'];
     this.lineageGraph = new Map(); // In-memory causal graph
+    
+    // Embedding service configuration
+    this.embeddingService = options.embeddingService || 'ollama';
+    this.ollamaUrl = options.ollamaUrl || process.env.OLLAMA_URL || 'http://localhost:11434';
+    this.embeddingModel = options.embeddingModel || process.env.OLLAMA_EMBEDDING_MODEL || 'nomic-embed-text-v2-moe';
+    this.embeddingDimension = options.embeddingDimension || 768; // nomic-embed-text-v2-moe default
   }
 
   /**
@@ -302,16 +309,182 @@ class HeretekSwarmMemory {
   }
 
   /**
-   * Generate embedding placeholder (replace with actual embedding model)
+   * Generate embeddings using configured embedding service
+   * 
+   * Supports multiple embedding backends:
+   * - Ollama (local, recommended for development)
+   * - OpenAI (production, high quality)
+   * - Custom embedding service via HTTP API
+   * 
+   * @param {string|string[]} text - Text or array of texts to embed
+   * @returns {Promise<number[]|number[][]>} - Embedding vector(s)
    */
   async generateEmbedding(text) {
-    // TODO: Integrate with Ollama embeddings or external embedding service
-    // For now, return a dummy embedding array
-    const textStr = typeof text === 'string' ? text : JSON.stringify(text);
-    const hash = textStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const texts = Array.isArray(text) ? text : [text];
     
-    // Create 1536-dim embedding (OpenAI-compatible size)
-    return Array(1536).fill(0).map((_, i) => Math.sin(hash + i) * 0.1);
+    try {
+      switch (this.embeddingService) {
+        case 'ollama':
+          return await this._generateOllamaEmbedding(texts);
+        
+        case 'openai':
+          return await this._generateOpenAIEmbedding(texts);
+        
+        case 'custom':
+          return await this._generateCustomEmbedding(texts);
+        
+        default:
+          throw new Error(`Unknown embedding service: ${this.embeddingService}`);
+      }
+    } catch (error) {
+      console.error('[HeretekSwarmMemory] Embedding generation failed:', error.message);
+      throw new Error(`Failed to generate embedding: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate embeddings using Ollama (local embedding service)
+   * @private
+   */
+  async _generateOllamaEmbedding(texts) {
+    const embeddings = [];
+    
+    for (const text of texts) {
+      const response = await fetch(`${this.ollamaUrl}/api/embeddings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: this.embeddingModel,
+          prompt: text,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ollama returned ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.embedding || !Array.isArray(data.embedding)) {
+        throw new Error('Invalid embedding response from Ollama');
+      }
+
+      embeddings.push(data.embedding);
+    }
+
+    // Return single embedding if single text was provided
+    return texts.length === 1 ? embeddings[0] : embeddings;
+  }
+
+  /**
+   * Generate embeddings using OpenAI API
+   * @private
+   */
+  async _generateOpenAIEmbedding(texts) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY environment variable not set');
+    }
+
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'text-embedding-3-small',
+        input: texts,
+        encoding_format: 'float',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI returned ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.data || !Array.isArray(data.data)) {
+      throw new Error('Invalid embedding response from OpenAI');
+    }
+
+    // Sort by index to maintain order
+    const sortedEmbeddings = data.data
+      .sort((a, b) => a.index - b.index)
+      .map(item => item.embedding);
+
+    return texts.length === 1 ? sortedEmbeddings[0] : sortedEmbeddings;
+  }
+
+  /**
+   * Generate embeddings using custom HTTP embedding service
+   * @private
+   */
+  async _generateCustomEmbedding(texts) {
+    const customUrl = process.env.CUSTOM_EMBEDDING_URL;
+    const customApiKey = process.env.CUSTOM_EMBEDDING_API_KEY;
+    
+    if (!customUrl) {
+      throw new Error('CUSTOM_EMBEDDING_URL environment variable not set');
+    }
+
+    const response = await fetch(customUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(customApiKey && { 'Authorization': `Bearer ${customApiKey}` }),
+      },
+      body: JSON.stringify({
+        texts: texts,
+        model: this.embeddingModel,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Custom embedding service returned ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.embeddings || !Array.isArray(data.embeddings)) {
+      throw new Error('Invalid embedding response from custom service');
+    }
+
+    return texts.length === 1 ? data.embeddings[0] : data.embeddings;
+  }
+
+  /**
+   * Validate embedding vector dimensions
+   * @param {number[]} embedding - Embedding vector to validate
+   * @returns {boolean} - True if valid
+   */
+  validateEmbedding(embedding) {
+    if (!Array.isArray(embedding)) {
+      return false;
+    }
+    
+    if (embedding.length !== this.embeddingDimension) {
+      console.warn(
+        `[HeretekSwarmMemory] Embedding dimension mismatch: expected ${this.embeddingDimension}, got ${embedding.length}`
+      );
+      return false;
+    }
+    
+    // Check for NaN or Infinity values
+    for (const value of embedding) {
+      if (Number.isNaN(value) || !Number.isFinite(value)) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 }
 
