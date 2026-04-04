@@ -230,6 +230,46 @@ npm run format
 - [Plugins](docs/PLUGINS.md)
 - [Operations](docs/OPERATIONS.md)
 
+## Security Features
+
+### SQL Injection Protection
+
+All SQL queries use parameterized queries and identifier escaping via [`lib/sql-utils.ts`](lib/sql-utils.ts):
+
+```typescript
+import { escapeTableName, escapeColumnName } from './lib/sql-utils';
+
+const sql = `SELECT * FROM ${escapeTableName(tableName)} 
+             ORDER BY ${escapeColumnName(columnName)} DESC`;
+```
+
+### Redis Authentication
+
+Centralized Redis client with authentication, TLS, and reconnection logic:
+
+```bash
+# .env configuration
+REDIS_PASSWORD=your-secure-password
+REDIS_TLS=true  # Enable for production
+REDIS_CONNECT_TIMEOUT=10000
+```
+
+See [`lib/redis-client.ts`](lib/redis-client.ts) for implementation details.
+
+### Audit Log Retention
+
+Automated cleanup of old audit logs with configurable retention policies:
+
+| Event Type | Retention Period |
+|------------|------------------|
+| debug      | 7 days           |
+| info       | 30 days          |
+| warning    | 90 days          |
+| error      | 365 days         |
+| critical   | 5 years          |
+
+Cleanup runs every 2 hours via cron. See [`scripts/audit-cleanup.sh`](scripts/audit-cleanup.sh).
+
 ## Related Repositories
 
 - [CLI](https://github.com/heretek/heretek-openclaw-cli) - Deployment CLI
