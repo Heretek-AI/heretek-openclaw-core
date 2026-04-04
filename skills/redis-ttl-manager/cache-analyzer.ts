@@ -10,6 +10,12 @@
  */
 
 import type { MemoryType } from './redis-ttl-manager';
+import { 
+  getRedisClient, 
+  isRedisClientInitialized,
+  createRedisClient,
+  createRedisConfigFromEnv 
+} from '../../lib/redis-client';
 export type { MemoryType };
 
 /**

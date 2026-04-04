@@ -18,6 +18,12 @@
 
 import type { AccessPattern, CacheStats } from './cache-analyzer';
 import type { MemoryType } from './redis-ttl-manager';
+import { 
+  getRedisClient, 
+  isRedisClientInitialized,
+  createRedisClient,
+  createRedisConfigFromEnv 
+} from '../../lib/redis-client';
 export type { AccessPattern, CacheStats, MemoryType };
 
 /**

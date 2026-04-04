@@ -14,6 +14,8 @@
  * @see {@link ../memory-consolidation/decay.ts} for Ebbinghaus decay integration
  */
 
+import { escapeTableName, escapeColumnName } from '../../lib/sql-utils';
+
 /**
  * pgvector optimizer configuration
  */
@@ -215,9 +217,9 @@ export function generateCreateIndexStatement(
   if (config.indexMethod === 'hnsw') {
     return `
 CREATE INDEX CONCURRENTLY IF NOT EXISTS 
-  ${tableName}_${columnName}_hnsw_idx 
-ON ${tableName} 
-USING hnsw (${columnName} vector_cosine_ops) 
+  ${escapeTableName(tableName)}_${escapeColumnName(columnName)}_hnsw_idx 
+ON ${escapeTableName(tableName)} 
+USING hnsw (${escapeColumnName(columnName)} vector_cosine_ops) 
 WITH (m = ${config.hnswM}, ef_construction = ${config.hnswEfConstruction});
 `.trim();
   }
@@ -225,9 +227,9 @@ WITH (m = ${config.hnswM}, ef_construction = ${config.hnswEfConstruction});
   // IVFFlat
   return `
 CREATE INDEX CONCURRENTLY IF NOT EXISTS 
-  ${tableName}_${columnName}_ivfflat_idx 
-ON ${tableName} 
-USING ivfflat (${columnName} vector_cosine_ops) 
+  ${escapeTableName(tableName)}_${escapeColumnName(columnName)}_ivfflat_idx 
+ON ${escapeTableName(tableName)} 
+USING ivfflat (${escapeColumnName(columnName)} vector_cosine_ops) 
 WITH (lists = ${config.ivfLists});
 `.trim();
 }
@@ -254,8 +256,8 @@ SELECT
   importance_score,
   access_count,
   created_at,
-  1 - (${columnName} <=> $${paramIndex}::vector) as similarity
-FROM ${tableName}
+  1 - (${escapeColumnName(columnName)} <=> $${paramIndex}::vector) as similarity
+FROM ${escapeTableName(tableName)}
 WHERE is_deleted = false
   AND is_archived = false
 `.trim();
@@ -279,7 +281,7 @@ WHERE is_deleted = false
 
   // Add similarity threshold
   if (params.threshold !== undefined) {
-    sql += ` AND (1 - (${columnName} <=> $${paramIndex}::vector)) >= $${paramIndex + 1}`;
+    sql += ` AND (1 - (${escapeColumnName(columnName)} <=> $${paramIndex}::vector)) >= $${paramIndex + 1}`;
     sqlParams.push(vectorLiteral, params.threshold);
     paramIndex += 2;
   }
@@ -297,7 +299,7 @@ WHERE is_deleted = false
 
   // Add ordering and limit
   sql += `
-ORDER BY ${columnName} <=> $${paramIndex}::vector
+ORDER BY ${escapeColumnName(columnName)} <=> $${paramIndex}::vector
 LIMIT $${paramIndex + 1}
 `;
   sqlParams.push(vectorLiteral, params.limit);
