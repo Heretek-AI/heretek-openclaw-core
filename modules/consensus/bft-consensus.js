@@ -11,10 +11,18 @@
 
 const { Redis } = require('ioredis');
 const crypto = require('crypto');
+const EventEmitter = require('events');
 
-class BFTConsensus {
+// AUDIT-FIX: A4 - Extend EventEmitter to support non-blocking event-driven waits
+class BFTConsensus extends EventEmitter {
   constructor(options = {}) {
-    this.redis = new Redis(options.redisUrl || 'redis://localhost:6379');
+    super();
+    // AUDIT-FIX: A6 — Removed hardcoded Redis URL; require env var or explicit config
+    const redisUrl = options.redisUrl || process.env.REDIS_URL;
+    if (!redisUrl) {
+      console.warn('[BFTConsensus] REDIS_URL not set and no redisUrl option provided');
+    }
+    this.redis = new Redis(redisUrl || 'redis://localhost:6379');
     this.nodeId = options.nodeId || `node-${Date.now()}`;
     this.clusterSize = options.clusterSize || 4; // 3f+1 where f=1
     this.view = 0;
@@ -125,6 +133,9 @@ class BFTConsensus {
       });
       
       this.state = 'commit';
+      
+      // AUDIT-FIX: A4 - Emit event for non-blocking waitForPrePrepare
+      this.emit('pre-prepare', { success: true, view, sequence });
     }
   }
 
@@ -144,6 +155,9 @@ class BFTConsensus {
     if (commits.length >= this.getQuorumSize() && this.state === 'commit') {
       this.state = 'committed';
       console.log(`✅ Consensus reached for decision #${sequence}`);
+      
+      // AUDIT-FIX: A4 - Emit event for non-blocking waitForConsensus
+      this.emit('consensus', { success: true, view, sequence, commits: commits.length });
       
       // Execute the decision
       return { committed: true, view, sequence, commits: commits.length };
@@ -207,6 +221,10 @@ class BFTConsensus {
     if (view === this.view) {
       console.log(`✅ Accepted new view ${view}`);
       this.state = 'idle';
+      
+      // AUDIT-FIX: A4 - Emit event for non-blocking waitForNewView
+      this.emit('new-view', { success: true, view });
+      
       return { accepted: true, view };
     }
   }
@@ -272,54 +290,69 @@ class BFTConsensus {
 
   /**
    * Wait for consensus to complete
+   * // AUDIT-FIX: A4 - Replace blocking loop with event-driven Promise pattern
+   * Previous bug: Busy-wait loop with 100ms polling consumed CPU and blocked the event loop.
+   * Fix: Use EventEmitter to resolve immediately when consensus is reached.
    */
   async waitForConsensus(request, timeout = 30000) {
-    const startTime = Date.now();
-    
-    while (Date.now() - startTime < timeout) {
-      if (this.state === 'committed') {
-        return { success: true, request };
-      }
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    // Timeout - initiate view change
-    await this.initViewChange();
-    return { success: false, reason: 'timeout' };
+    return new Promise((resolve, reject) => {
+      const handler = (result) => {
+        clearTimeout(timer);
+        this.off('consensus', handler);
+        resolve({ success: true, request, ...result });
+      };
+      
+      this.on('consensus', handler);
+      
+      const timer = setTimeout(async () => {
+        this.off('consensus', handler);
+        await this.initViewChange();
+        resolve({ success: false, reason: 'timeout' });
+      }, timeout);
+    });
   }
 
   /**
    * Wait for PRE-PREPARE from primary
+   * // AUDIT-FIX: A4 - Replace blocking loop with event-driven Promise pattern
    */
   async waitForPrePrepare(request, timeout = 10000) {
-    const startTime = Date.now();
-    
-    while (Date.now() - startTime < timeout) {
-      if (this.state === 'prepare' || this.state === 'commit' || this.state === 'committed') {
-        return { success: true };
-      }
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    // Primary didn't send PRE-PREPARE - initiate view change
-    await this.initViewChange();
-    return { success: false, reason: 'primary_timeout' };
+    return new Promise((resolve, reject) => {
+      const handler = (result) => {
+        clearTimeout(timer);
+        this.off('pre-prepare', handler);
+        resolve({ success: true, ...result });
+      };
+      
+      this.on('pre-prepare', handler);
+      
+      const timer = setTimeout(async () => {
+        this.off('pre-prepare', handler);
+        await this.initViewChange();
+        resolve({ success: false, reason: 'primary_timeout' });
+      }, timeout);
+    });
   }
 
   /**
    * Wait for NEW-VIEW after view change
+   * // AUDIT-FIX: A4 - Replace blocking loop with event-driven Promise pattern
    */
   async waitForNewView(timeout = 10000) {
-    const startTime = Date.now();
-    
-    while (Date.now() - startTime < timeout) {
-      if (this.state === 'idle') {
-        return { success: true, view: this.view };
-      }
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    return { success: false, reason: 'view_change_timeout' };
+    return new Promise((resolve, reject) => {
+      const handler = (result) => {
+        clearTimeout(timer);
+        this.off('new-view', handler);
+        resolve({ success: true, view: this.view, ...result });
+      };
+      
+      this.on('new-view', handler);
+      
+      const timer = setTimeout(() => {
+        this.off('new-view', handler);
+        resolve({ success: false, reason: 'view_change_timeout' });
+      }, timeout);
+    });
   }
 
   /**

@@ -1,3 +1,8 @@
+// DEPRECATED: Use curiosity-engine-v2.js instead.
+// This file will be removed in a future version.
+// AUDIT-FIX: C9 — Orphaned duplicate
+// Date: 2026-04-04
+
 /**
  * Curiosity Engine
  * 

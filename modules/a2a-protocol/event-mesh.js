@@ -29,10 +29,14 @@ class EventMesh {
 
   /**
    * Connect to Redis and establish pub/sub channels
+   * 
+   * // AUDIT-FIX: A1
+   * Previous bug: this.subscriber.duplicate() was called before this.subscriber existed.
+   * Fix: Create main client first, connect it, then duplicate for subscriber.
    */
   async connect() {
-    return new Promise((resolve, reject) => {
-      // Main client for publishing
+    try {
+      // Step 1: Create main Redis client for publishing
       this.client = redis.createClient({
         socket: {
           host: this.options.host,
@@ -42,37 +46,51 @@ class EventMesh {
         database: this.options.db
       });
 
-      // Subscriber client for receiving
-      this.subscriber = this.subscriber.duplicate();
+      this.client.on('error', (err) => {
+        console.error('[EventMesh] Client error:', err.message);
+      });
 
-      const handleConnect = () => {
-        this.connected = true;
-        this.reconnectAttempts = 0;
-        resolve();
-      };
+      // Step 2: Connect the main client first
+      await this.client.connect();
 
-      const handleError = (err) => {
-        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-          reject(new Error(`Failed to connect after ${this.maxReconnectAttempts} attempts: ${err.message}`));
-          return;
-        }
-        this.reconnectAttempts++;
-        console.error(`[EventMesh] Connection attempt ${this.reconnectAttempts} failed: ${err.message}`);
-      };
+      // Step 3: Create subscriber by duplicating the connected client
+      this.subscriber = this.client.duplicate();
 
-      this.client.on('error', handleError);
-      this.subscriber.on('error', handleError);
-      this.client.on('connect', handleConnect);
+      this.subscriber.on('error', (err) => {
+        console.error('[EventMesh] Subscriber error:', err.message);
+      });
 
       // Set up subscriber message handler
       this.subscriber.on('message', (channel, message) => {
         this._handleMessage(channel, message);
       });
 
-      // Connect both clients
-      this.client.connect().catch(handleError);
-      this.subscriber.connect().catch(handleError);
-    });
+      // Step 4: Connect the subscriber
+      await this.subscriber.connect();
+
+      this.connected = true;
+      this.reconnectAttempts = 0;
+      
+    } catch (err) {
+      // Cleanup on failure
+      this.connected = false;
+      if (this.client) {
+        try { await this.client.quit(); } catch (e) { /* ignore */ }
+      }
+      if (this.subscriber) {
+        try { await this.subscriber.quit(); } catch (e) { /* ignore */ }
+      }
+      this.client = null;
+      this.subscriber = null;
+      
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+        throw new Error(`Failed to connect after ${this.maxReconnectAttempts} attempts: ${err.message}`);
+      }
+      
+      this.reconnectAttempts++;
+      console.error(`[EventMesh] Connection attempt ${this.reconnectAttempts} failed:`, err.message);
+      throw err;
+    }
   }
 
   /**
@@ -105,6 +123,11 @@ class EventMesh {
    * @param {Function} callback - Function to call when message received
    */
   async subscribe(topic, callback) {
+    // SKEP-05 FIX: Add connected guard to prevent crash on null this.subscriber
+    if (!this.connected) {
+      throw new Error('EventMesh not connected. Call connect() before subscribe()');
+    }
+    
     const fullTopic = this._fullTopic(topic);
     
     if (!this.subscriptions.has(topic)) {

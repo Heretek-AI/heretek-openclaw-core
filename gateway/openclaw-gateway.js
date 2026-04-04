@@ -46,14 +46,18 @@ const crypto = require('crypto');
 const CONFIG = {
     port: parseInt(process.env.GATEWAY_PORT || process.env.PORT || '18789', 10),
     host: process.env.GATEWAY_HOST || process.env.HOST || '0.0.0.0',
-    redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+    // AUDIT-FIX: A6 — Warn when using default Redis URL
+    redisUrl: (() => { const u = process.env.REDIS_URL; if (!u) console.warn('[Gateway] REDIS_URL not set, using default'); return u || 'redis://localhost:6379'; })(),
     redisHost: process.env.REDIS_HOST || 'localhost',
     redisPort: parseInt(process.env.REDIS_PORT || '6379', 10),
     heartbeatInterval: 30000,
     messageTimeout: 30000,
     maxMessageSize: 1024 * 1024, // 1MB
     auth: {
-        enabled: process.env.GATEWAY_AUTH_ENABLED === 'true',
+        // AUDIT-FIX: A2 - Default auth enabled in production for zero-trust security
+        enabled: process.env.GATEWAY_AUTH_ENABLED !== undefined 
+            ? process.env.GATEWAY_AUTH_ENABLED === 'true'
+            : process.env.NODE_ENV === 'production',
         token: process.env.GATEWAY_AUTH_TOKEN || null
     }
 };
@@ -207,7 +211,7 @@ class OpenClawGateway extends EventEmitter {
                 reject(new Error(`Message timeout for agent ${toAgent}`));
             }, options.timeout || this.config.messageTimeout);
 
-            this.pendingResponses.set(correlationId, { resolve, reject, timeout });
+            this.pendingResponses.set(correlationId, { resolve, reject, timeout, targetAgent: toAgent });
 
             agent.ws.send(JSON.stringify(messagePayload));
         });
@@ -222,8 +226,13 @@ class OpenClawGateway extends EventEmitter {
         const results = [];
         const timestamp = new Date().toISOString();
 
-        for (const [agentId, agent] of this.agents) {
-            if (agent.ws && agent.ws.readyState === WebSocket.OPEN) {
+        // AUDIT-FIX: A10 — Parallelize broadcast with Promise.allSettled
+        const agents = Array.from(this.agents.entries()).filter(
+            ([_, agent]) => agent.ws && agent.ws.readyState === WebSocket.OPEN
+        );
+
+        const settled = await Promise.allSettled(
+            agents.map(async ([agentId, agent]) => {
                 try {
                     agent.ws.send(JSON.stringify({
                         type: 'broadcast',
@@ -231,11 +240,16 @@ class OpenClawGateway extends EventEmitter {
                         from: message.from || 'gateway',
                         timestamp
                     }));
-                    results.push({ agentId, success: true });
+                    return { agentId, success: true };
                 } catch (error) {
-                    results.push({ agentId, success: false, error: error.message });
+                    return { agentId, success: false, error: error.message };
                 }
-            }
+            })
+        );
+
+        for (const r of settled) {
+            if (r.status === 'fulfilled') results.push(r.value);
+            else results.push({ agentId: 'unknown', success: false, error: r.reason?.message });
         }
 
         // Also publish to Redis for external subscribers
@@ -341,7 +355,40 @@ class OpenClawGateway extends EventEmitter {
      * @param {http.IncomingMessage} req - HTTP request
      */
     _handleConnection(ws, req) {
-        const agentId = this._extractAgentId(req);
+        // AUDIT-FIX: A2 - Enforce token authentication before processing connection
+        // SKEP-03 FIX: Use crypto.timingSafeEqual to prevent timing attacks
+        if (this.config.auth.enabled) {
+            try {
+                const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+                const token = url.searchParams.get('token');
+                
+                if (!token) {
+                    console.warn('[Gateway] Unauthorized connection attempt - missing token');
+                    ws.close(4001, 'Unauthorized');
+                    return;
+                }
+                
+                // Use timing-safe comparison to prevent timing attacks
+                const tokenBuffer = Buffer.from(token);
+                const expectedBuffer = Buffer.from(this.config.auth.token);
+                const isValid = tokenBuffer.length === expectedBuffer.length && 
+                               crypto.timingSafeEqual(tokenBuffer, expectedBuffer);
+                
+                if (!isValid) {
+                    console.warn('[Gateway] Unauthorized connection attempt - invalid token');
+                    ws.close(4001, 'Unauthorized');
+                    return;
+                }
+            } catch (urlError) {
+                console.error('[Gateway] Failed to parse connection URL:', urlError.message);
+                ws.close(4001, 'Unauthorized');
+                return;
+            }
+        }
+
+        const rawAgentId = this._extractAgentId(req);
+        // AUDIT-FIX: A7 — Sanitize agent ID to prevent Redis key injection
+        const agentId = rawAgentId ? rawAgentId.replace(/[^a-zA-Z0-9\-_]/g, '') : rawAgentId;
         const clientId = this._generateClientId();
 
         console.log(`[Gateway] Connection from ${agentId || 'unknown'} (${clientId})`);
@@ -385,9 +432,29 @@ class OpenClawGateway extends EventEmitter {
      * @param {Buffer} data - Message data
      */
     async _handleMessage(ws, agentId, data) {
+        // AUDIT-FIX: A3 - Wrap JSON.parse with proper error handling
+        let message;
         try {
-            const message = JSON.parse(data.toString());
+            message = JSON.parse(data.toString());
+        } catch (parseError) {
+            // Log malformed message (truncated to 200 chars)
+            const rawMsg = data.toString();
+            const truncated = rawMsg.length > 200 ? rawMsg.substring(0, 200) + '...' : rawMsg;
+            console.error(`[Gateway] Malformed JSON from ${agentId || 'unknown'}:`, truncated);
+            
+            // Send error response back to client
+            ws.send(JSON.stringify({
+                type: 'error',
+                error: 'Invalid JSON format',
+                details: parseError.message,
+                timestamp: new Date().toISOString()
+            }));
+            
+            // Return early to prevent further processing
+            return;
+        }
 
+        try {
             console.log(`[Gateway] Message from ${agentId || 'unknown'}:`, message.type);
 
             switch (message.type) {
@@ -428,10 +495,10 @@ class OpenClawGateway extends EventEmitter {
             }
 
         } catch (error) {
-            console.error('[Gateway] Failed to parse message:', error.message);
+            console.error('[Gateway] Failed to process message:', error.message);
             ws.send(JSON.stringify({
                 type: 'error',
-                error: 'Invalid message format',
+                error: 'Message processing failed',
                 timestamp: new Date().toISOString()
             }));
         }
@@ -674,6 +741,17 @@ class OpenClawGateway extends EventEmitter {
                 });
             }
 
+            // SKEP-06 FIX: Clean pendingResponses for the disconnected agent
+            for (const [correlationId, pending] of this.pendingResponses) {
+                // Check if this pending response is waiting for this agent
+                // (We need to track which agent each pending response targets)
+                if (pending.targetAgent === agentId) {
+                    clearTimeout(pending.timeout);
+                    pending.reject(new Error(`Agent ${agentId} disconnected`));
+                    this.pendingResponses.delete(correlationId);
+                }
+            }
+
             this.emit('agent-disconnected', { agentId });
         }
     }
@@ -684,6 +762,17 @@ class OpenClawGateway extends EventEmitter {
      */
     _handleHttpRequest(req, res) {
         const url = new URL(req.url, `http://${req.headers.host}`);
+
+        // SKEP-01 FIX: Add auth check to HTTP endpoints (same as WebSocket)
+        if (this.config.auth.enabled) {
+            const token = url.searchParams.get('token');
+            if (!token || !crypto.timingSafeEqual(Buffer.from(token), Buffer.from(this.config.auth.token))) {
+                console.warn('[Gateway] Unauthorized HTTP request - invalid or missing token');
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: 'Unauthorized', status: 401 }));
+                return;
+            }
+        }
 
         // Health check endpoint - basic gateway health
         if (url.pathname === '/health') {

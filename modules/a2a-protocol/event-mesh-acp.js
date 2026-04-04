@@ -282,7 +282,9 @@ class EventMeshACP extends EventMesh {
 
       if (this.client && this.connected) {
         const fullTopic = this._fullTopic(msg.topic);
-        this.client.publish(fullTopic, JSON.stringify(payload)).catch(() => {});
+        this.client.publish(fullTopic, JSON.stringify(payload)).catch(err => {
+          console.error('[EventMesh ACP] Publish failed:', err.message);
+        });
       }
     }
   }

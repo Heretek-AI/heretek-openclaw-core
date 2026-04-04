@@ -30,6 +30,8 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const WebSocket = require('ws');
+// AUDIT-FIX: Add pg for swarm_memories table access
+const { Pool } = require('pg');
 
 /**
  * GatewayClient - OpenClaw Gateway WebSocket RPC Client
@@ -376,6 +378,14 @@ class AgentClient {
         this.memoryDir = '/app/memory';
         this.collectiveDir = '/app/collective';
 
+        // Database connection for swarm_memories
+        this.dbPool = new Pool({
+            connectionString: config.postgresUrl || process.env.DATABASE_URL || 'postgresql://localhost:5432/openclaw',
+            max: 10,
+            idleTimeoutMillis: 30000,
+            connectionTimeoutMillis: 2000
+        });
+
         // Initialize Gateway Client
         this.gatewayClient = new GatewayClient({
             agentId: this.agentId,
@@ -458,6 +468,7 @@ class AgentClient {
             { role: 'user', content: prompt }
         ];
 
+        // AUDIT-FIX: B9 — Add request timeout to prevent hanging connections
         const response = await fetch(`${this.litellmHost}/v1/chat/completions`, {
             method: 'POST',
             headers: {
@@ -469,7 +480,8 @@ class AgentClient {
                 messages: messages,
                 agent: this.agentId,
                 ...options
-            })
+            }),
+            signal: AbortSignal.timeout(60000),
         });
 
         if (!response.ok) {
@@ -649,6 +661,177 @@ class AgentClient {
     }
 
     /**
+     * Store a swarm memory in the database
+     * @param {Object} memory - Memory object to store
+     * @returns {Promise<Object>} The stored memory with ID
+     */
+    async storeSwarmMemory(memory) {
+        const client = await this.dbPool.connect();
+        try {
+            const memoryId = memory.id || `mem:${Date.now()}:${this.agentId}`;
+            const result = await client.query(
+                `INSERT INTO swarm_memories (id, agent_id, content, embedding, accessibility, consciousness_level, consciousness_markers, tags, lineage, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+                 ON CONFLICT (id) DO UPDATE SET
+                    content = $3,
+                    embedding = $4,
+                    accessibility = $5,
+                    consciousness_level = $6,
+                    consciousness_markers = $7,
+                    tags = $8,
+                    lineage = $9,
+                    updated_at = NOW()
+                 RETURNING *`,
+                [
+                    memoryId,
+                    this.agentId,
+                    JSON.stringify(memory.content || {}),
+                    memory.embedding || null,
+                    memory.accessibility || 'triad',
+                    memory.consciousness_level || 'none',
+                    JSON.stringify(memory.consciousness_markers || []),
+                    JSON.stringify(memory.tags || []),
+                    memory.lineage ? JSON.stringify(memory.lineage) : null
+                ]
+            );
+            return result.rows[0];
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
+     * Retrieve swarm memories for this agent
+     * @param {Object} options - Query options
+     * @param {number} [options.limit=10] - Maximum number of results
+     * @param {number} [options.offset=0] - Offset for pagination
+     * @param {string} [options.accessibility] - Filter by accessibility
+     * @returns {Promise<Array>} Array of swarm memories
+     */
+    async getSwarmMemories(options = {}) {
+        const { limit = 10, offset = 0, accessibility } = options;
+        const client = await this.dbPool.connect();
+        try {
+            let query = `
+                SELECT id, agent_id, content, embedding, accessibility, 
+                       consciousness_level, consciousness_markers, tags, lineage,
+                       created_at, updated_at
+                FROM swarm_memories
+                WHERE agent_id = $1 OR accessibility = ANY($2)
+            `;
+            const params = [this.agentId, ['swarm', 'triad']];
+
+            if (accessibility) {
+                query += ` AND accessibility = $3`;
+                params.push(accessibility);
+            }
+
+            query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+            params.push(limit, offset);
+
+            const result = await client.query(query, params);
+            return result.rows.map(row => ({
+                ...row,
+                content: typeof row.content === 'string' ? JSON.parse(row.content) : row.content,
+                consciousness_markers: typeof row.consciousness_markers === 'string' ? JSON.parse(row.consciousness_markers) : row.consciousness_markers,
+                tags: typeof row.tags === 'string' ? JSON.parse(row.tags) : row.tags,
+                lineage: typeof row.lineage === 'string' ? JSON.parse(row.lineage) : row.lineage
+            }));
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
+     * Search swarm memories by vector similarity
+     * @param {Array<number>} embedding - Query embedding vector
+     * @param {Object} options - Search options
+     * @returns {Promise<Array>} Array of similar memories
+     */
+    async searchSwarmMemories(embedding, options = {}) {
+        const { limit = 10, accessibility } = options;
+        const client = await this.dbPool.connect();
+        try {
+            let query = `
+                SELECT id, agent_id, content, consciousness_level,
+                       1 - (embedding <=> $1) AS similarity
+                FROM swarm_memories
+                WHERE (accessibility = ANY($2) OR agent_id = $3)
+            `;
+            const params = [embedding, ['swarm', 'triad'], this.agentId];
+
+            if (accessibility) {
+                query += ` AND accessibility = $4`;
+                params.push(accessibility);
+            }
+
+            query += ` ORDER BY embedding <=> $1 LIMIT $${params.length + 1}`;
+            params.push(limit);
+
+            const result = await client.query(query, params);
+            return result.rows.map(row => ({
+                memoryId: row.id,
+                agentId: row.agent_id,
+                content: typeof row.content === 'string' ? JSON.parse(row.content) : row.content,
+                consciousnessLevel: row.consciousness_level,
+                similarity: row.similarity
+            }));
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
+     * Delete a swarm memory by ID
+     * @param {string} memoryId - Memory ID to delete
+     * @returns {Promise<boolean>} True if deleted
+     */
+    async deleteSwarmMemory(memoryId) {
+        const client = await this.dbPool.connect();
+        try {
+            const result = await client.query(
+                `DELETE FROM swarm_memories WHERE id = $1 AND agent_id = $2 RETURNING id`,
+                [memoryId, this.agentId]
+            );
+            return result.rowCount > 0;
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
+     * Get database health status
+     * @returns {Promise<Object>} Database health information
+     */
+    async getDatabaseHealth() {
+        const client = await this.dbPool.connect();
+        try {
+            const result = await client.query(`SELECT 1 as status`);
+            return {
+                status: 'healthy',
+                connected: result.rows[0]?.status === 1,
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            return {
+                status: 'unhealthy',
+                connected: false,
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
+     * Close database pool connection
+     */
+    async closeDatabase() {
+        await this.dbPool.end();
+    }
+
+    /**
      * Get agent capabilities based on role
      * @private
      */
@@ -716,9 +899,10 @@ You communicate with other agents through the OpenClaw Gateway WebSocket RPC pro
     }
 
     /**
-     * Disconnect from Gateway
+     * Disconnect from Gateway and close database connections
      */
     async disconnect() {
+        await this.dbPool.end();
         return this.gatewayClient.disconnect();
     }
 

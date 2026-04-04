@@ -6,6 +6,9 @@
 -- UP
 BEGIN;
 
+-- AUDIT-FIX: B2 — Enable pgvector extension before any vector columns are used
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- Schema migrations table (tracks applied migrations)
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version INTEGER PRIMARY KEY,

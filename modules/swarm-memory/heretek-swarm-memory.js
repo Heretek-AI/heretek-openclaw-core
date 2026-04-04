@@ -7,13 +7,22 @@
 
 const { Redis } = require('ioredis');
 const { Pool } = require('pg');
-const fetch = require('node-fetch');
 
 class HeretekSwarmMemory {
   constructor(options = {}) {
-    this.redis = new Redis(options.redisUrl || 'redis://localhost:6379');
+    // AUDIT-FIX: A6 — Removed hardcoded Redis URL
+    const redisUrl = options.redisUrl || process.env.REDIS_URL;
+    if (!redisUrl) {
+      console.warn('[SwarmMemory] REDIS_URL not set and no redisUrl option provided');
+    }
+    this.redis = new Redis(redisUrl || 'redis://localhost:6379');
+    // AUDIT-FIX: A6 — Removed hardcoded Postgres URL
+    const pgUrl = options.postgresUrl || process.env.DATABASE_URL;
+    if (!pgUrl) {
+      console.warn('[SwarmMemory] DATABASE_URL not set and no postgresUrl option provided');
+    }
     this.pgvector = new Pool({
-      connectionString: options.postgresUrl || 'postgresql://localhost:5432/openclaw',
+      connectionString: pgUrl || 'postgresql://localhost:5432/openclaw',
     });
     
     this.consciousnessLevels = ['GWT', 'IIT', 'AST', 'intrinsic'];

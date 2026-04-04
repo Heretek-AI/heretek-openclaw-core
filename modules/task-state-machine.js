@@ -1,3 +1,8 @@
+// DEPRECATED: This module is not imported anywhere in the codebase.
+// Scheduled for removal. If you need this functionality, contact the team.
+// Audit Reference: AUDIT-FIX C1
+// Date: 2026-04-04
+
 /**
  * Task State Machine
  * 
