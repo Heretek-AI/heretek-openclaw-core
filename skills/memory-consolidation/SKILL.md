@@ -5,9 +5,10 @@ description: Reviews and organizes memories, promoting episodic to semantic stor
 
 # Memory Consolidation Skill
 
-**Purpose:** Maintain healthy, organized memory systems.
+**Purpose:** Maintain healthy, organized memory systems with AgeMem unified memory API.
 
 **Status:** ✅ Implemented (2026-03-29)
+**AgeMem API Status:** ✅ Implemented (2026-04-04)
 
 **Location:** `~/.openclaw/workspace/skills/memory-consolidation/`
 
@@ -28,6 +29,103 @@ PROMOTION_THRESHOLD="${PROMOTION_THRESHOLD:-10}"          # Access count
 ARCHIVE_AGE="${ARCHIVE_AGE:-2592000}"                     # 30 days
 IMPORTANCE_DECAY="${IMPORTANCE_DECAY:-0.95}"              # Decay factor
 ```
+
+---
+
+## AgeMem Unified Memory API
+
+The memory consolidation skill provides the AgeMem unified memory API for cross-agent memory operations.
+
+### `memory_retrieve(query, recency_weight)`
+
+Retrieves memories with Ebbinghaus decay weighting applied to relevance scores.
+
+**Signature:**
+```typescript
+memory_retrieve(params: {
+  memories: Array<{
+    content: string;
+    importance: number;
+    createdAt: string | Date;
+    accessCount?: number;
+    type?: string;
+    path?: string;
+  }>;
+  query?: string;
+  recencyWeight?: number;  // 0-1, default 0.5
+  config?: Partial<EbbinghausConfig>;
+}): Promise<MemoryRetrievalResult[]>
+```
+
+**Parameters:**
+- `memories` - Array of memory candidates to rank
+- `query` - Optional search query for semantic relevance
+- `recencyWeight` - Weight given to recency vs semantic relevance (0-1, default 0.5)
+- `config` - Optional Ebbinghaus configuration override
+
+**Returns:** Sorted array of memories by combined relevance score
+
+**Example:**
+```typescript
+import { memory_retrieve } from './decay';
+
+const results = await memory_retrieve({
+  memories: [
+    {
+      content: "User prefers TypeScript over JavaScript",
+      importance: 0.9,
+      createdAt: "2026-04-01T10:00:00Z",
+      accessCount: 15,
+      type: "semantic",
+      path: "memory/2026-04-01.md"
+    },
+    {
+      content: "Session context from yesterday",
+      importance: 0.7,
+      createdAt: "2026-04-03T14:30:00Z",
+      accessCount: 3,
+      type: "episodic",
+      path: "episodes/2026-04-03/session.jsonl"
+    }
+  ],
+  query: "user preferences",
+  recencyWeight: 0.3  // Prioritize semantic relevance over recency
+});
+
+// Results sorted by decayedScore (combined semantic + temporal relevance)
+console.log(results[0].content);
+```
+
+### Ebbinghaus Forgetting Curve
+
+The `memory_retrieve` function implements the Ebbinghaus forgetting curve formula:
+
+```
+R(t) = S * e^(-λt) * repetition_bonus
+
+Where:
+  R(t) = retention strength at time t
+  S = initial memory strength (importance score)
+  λ = ln(2) / halfLifeDays (decay constant)
+  t = time elapsed in days
+  repetition_bonus = 1 + log10(accessCount + 1) * (repetitionBoost - 1)
+```
+
+**Default Configuration:**
+```typescript
+{
+  enabled: true,
+  halfLifeDays: 7,        // Episodic memories decay faster
+  floorMultiplier: 0.1,   // Never decay below 10% of original
+  repetitionBoost: 1.5    // Frequently accessed memories boosted
+}
+```
+
+### Additional API Functions
+
+- **`applyEbbinghausDecayToScore()`** - Apply decay to a single memory score
+- **`batchApplyDecay()`** - Batch process multiple memories
+- **`calculateOptimalReviewInterval()`** - Calculate when a memory should be reviewed
 
 ---
 
