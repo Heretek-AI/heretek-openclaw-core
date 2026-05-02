@@ -21,10 +21,10 @@
     "eventemitter3": "^5.0.1",
     "ioredis": "^5.10.1",
     "redis": "^4.6.0",
-    "axios": "^1.6.0",
+    "axios": "^1.15.0",
     "pg": "^8.11.3",
     "pgvector": "^0.1.8",
-    "uuid": "^9.0.0",
+    "uuid": "^14.0.0",
     "ws": "^8.20.0"
   },
   "devDependencies": {
